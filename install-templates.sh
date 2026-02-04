@@ -93,6 +93,16 @@ rm -rf .nightshift/.git 2>/dev/null || true
 
 echo -e "${GREEN}Installed: .nightshift/ (clean, no .git)${NC}"
 
+# Install Documentation Rules (make them visible)
+echo -e "${BLUE}Installing documentation rules...${NC}"
+mkdir -p docs
+if [ -f "docs/documentation-rules.md" ]; then
+    echo -e "${YELLOW}Warning: docs/documentation-rules.md exists. Backing up.${NC}"
+    mv docs/documentation-rules.md docs/documentation-rules.md.bak
+fi
+cp .nightshift/docs/documentation-rules.md docs/documentation-rules.md
+echo -e "${GREEN}Installed: docs/documentation-rules.md${NC}"
+
 # Install vendor shim
 echo -e "${BLUE}Installing $VENDOR shim...${NC}"
 case "$VENDOR" in
@@ -161,9 +171,11 @@ esac
 echo -e "${BLUE}Installing git hooks...${NC}"
 cp .nightshift/hooks/pre-commit .git/hooks/pre-commit
 cp .nightshift/hooks/commit-msg .git/hooks/commit-msg
-chmod +x .git/hooks/pre-commit .git/hooks/commit-msg
+cp .nightshift/hooks/pre-push .git/hooks/pre-push
+chmod +x .git/hooks/pre-commit .git/hooks/commit-msg .git/hooks/pre-push
 echo -e "${GREEN}Installed: .git/hooks/pre-commit${NC}"
 echo -e "${GREEN}Installed: .git/hooks/commit-msg${NC}"
+echo -e "${GREEN}Installed: .git/hooks/pre-push${NC}"
 
 # Cleanup is handled by trap EXIT
 
@@ -185,6 +197,7 @@ case "$VENDOR" in
 esac
 echo "  .git/hooks/pre-commit - Nag enforcement hook"
 echo "  .git/hooks/commit-msg - Commit message validation hook"
+echo "  .git/hooks/pre-push   - Documentation rules enforcement hook"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
 case "$VENDOR" in

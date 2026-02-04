@@ -97,16 +97,23 @@ This gives you:
 | `.nightshift/commands/` | SOPs for git-brain commits, nag updates    |
 | `.nightshift/nags/`     | Quality gate definitions                   |
 | `.nightshift/hooks/`    | Git hooks source files                     |
+| `.nightshift/docs/`     | Documentation rules                        |
 | `.nightshift/state/`    | Runtime state (forward-prompt, nag-status) |
 
-### Step 2: Install Git Hooks
+### Step 2: Install Git Hooks & Docs
 
-Git hooks enforce the nag protocol - you cannot commit if any nag is `NOK`.
+Git hooks enforce the nag protocol, and documentation rules ensure consistent file naming.
 
 ```bash
+# Install Git Hooks
 cp .nightshift/hooks/pre-commit .git/hooks/pre-commit
 cp .nightshift/hooks/commit-msg .git/hooks/commit-msg
-chmod +x .git/hooks/pre-commit .git/hooks/commit-msg
+cp .nightshift/hooks/pre-push .git/hooks/pre-push
+chmod +x .git/hooks/pre-commit .git/hooks/commit-msg .git/hooks/pre-push
+
+# Install Documentation Rules
+mkdir -p docs
+cp .nightshift/docs/documentation-rules.md docs/documentation-rules.md
 ```
 
 **Bypass** (for human-supervised commits only):
