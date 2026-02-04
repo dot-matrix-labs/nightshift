@@ -19,7 +19,7 @@ We need to change our workflow and our tools to autonomous software factories.
 ## Core Concepts
 
 - **Git-Brain**: Git is all you need. Commits are a "Reasoning Ledger." We store the _prompt_ and _intent_ in hidden metadata to allow perfect replayability.
-- **Deep Context**: A "Documentation Fractal" anchored by `START_HERE.md` allows agents to situate themselves without RAG, vector stores, or "magic."
+- **Deep Context**: A "Documentation Fractal" anchored by [docs/README.md](./docs/README.md) allows agents to situate themselves without RAG, vector stores, or "magic."
 - **Multi-Agent**: Use different reasoning providers for what they do best, at the best cost, for the right unit of work.
 - **Semantic Worktrees**: Git branches are named like file paths (`ns/session/option-a`) to show lineage and intent.
 - **Nags**: Mandatory "Gateways of Last Resort" checklists that agents must pass before marking tasks complete.
@@ -106,7 +106,7 @@ For manual installation or building from source, see [CLI Installation Guide](./
 ### Getting Started
 
 - [Installation Guide](./templates/installation/README.md) - Install Nightshift templates for your AI agent
-- [Start Here](./START_HERE.md) - Repository knowledge base entry point
+- [Knowledge Base](./docs/README.md) - The entry point for all documentation
 
 ### Methodology
 
