@@ -1,10 +1,28 @@
 ![Nightshift Banner](./docs/assets/banner.svg)
 
-**Nightshift** is a methodology and toolset for enabling autonomous AI agents to build, maintain, and document large software projects. It shifts the focus from human-readable code to machine-reproducible "Reasoning Ledgers." It's a factory for autonomous software.
+## Quick Start
+
+**Install Nightshift for your AI agent:**
+
+```bash
+# OpenCode (default)
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
+
+# Claude Code, Cursor, Gemini CLI, or Codex CLI
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- <vendor>
+```
+
+**What you get:** `.nightshift/` templates, vendor shim, and git hooks for quality gates.
+
+See [Installation Guide](./templates/installation/README.md) for full details.
+
+---
+
+**Nightshift** is a methodology for enabling autonomous AI agents to build, maintain, and document large software projects. It shifts from human-readable code to machine-reproducible "Reasoning Ledgers."
 
 ## Why
 
-**We want agents to work overnight, and the factory must not catch fire.**
+We want agents to work overnight, and the factory must not catch fire.
 
 Ever had an agent:
 
@@ -12,9 +30,7 @@ Ever had an agent:
 - Say "it's perfect" but it doesn't compile?
 - Get stuck in a loop?
 
-We all have. Engineers don't want to be agent nannies.
-
-We need to change our workflow and our tools to autonomous software factories.
+We need autonomous software factories with quality gates and structured context.
 
 ## Core Concepts
 

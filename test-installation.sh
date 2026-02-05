@@ -143,6 +143,31 @@ else
     exit 1
 fi
 
+# Validate source templates (prevent malformed JSON in templates)
+echo ""
+echo "🔍 Validating template JSON files..."
+TEMPLATE_ERRORS=0
+
+# Check opencode.json template
+if [ -f "templates/installation/shims/opencode.json" ]; then
+    if jq . templates/installation/shims/opencode.json > /dev/null 2>&1; then
+        echo "✅ templates/installation/shims/opencode.json is valid JSON"
+    else
+        echo "❌ templates/installation/shims/opencode.json is INVALID JSON"
+        TEMPLATE_ERRORS=$((TEMPLATE_ERRORS + 1))
+    fi
+fi
+
+# Exit if template validation failed
+if [ $TEMPLATE_ERRORS -gt 0 ]; then
+    echo ""
+    echo "❌ Template validation failed. Please fix the JSON errors above."
+    exit 1
+fi
+
+echo ""
+echo "✅ All template validations passed"
+
 # Test forward prompt file
 if [ -f ".nightshift/state/forward-prompt.md" ]; then
     echo "✅ .nightshift/state/forward-prompt.md exists"
