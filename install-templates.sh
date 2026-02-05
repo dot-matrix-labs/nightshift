@@ -72,7 +72,7 @@ else
 fi
 
 # Verify the download worked
-if [ ! -d "$WORK_DIR/templates/installation/nightshift" ]; then
+if [ ! -f "$WORK_DIR/templates/AGENTS.md" ]; then
     echo -e "${RED}Error: Failed to download templates. Check your internet connection.${NC}"
     exit 1
 fi
@@ -86,7 +86,11 @@ if [ -d ".nightshift" ]; then
     rm -rf .nightshift.bak
     mv .nightshift .nightshift.bak
 fi
-cp -r "$WORK_DIR/templates/installation/nightshift" .nightshift
+
+# Create directory and copy all templates EXCEPT shims
+mkdir -p .nightshift
+cp -r "$WORK_DIR/templates/"* .nightshift/
+rm -rf .nightshift/shims
 
 # IMPORTANT: Ensure NO .git folder exists (tarball shouldn't have one, but be paranoid)
 rm -rf .nightshift/.git 2>/dev/null || true
@@ -111,7 +115,7 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: opencode.json exists. Backing up.${NC}"
             mv opencode.json opencode.json.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/opencode.json" opencode.json
+        cp "$WORK_DIR/templates/shims/opencode.json" opencode.json
         echo -e "${GREEN}Installed: opencode.json${NC}"
         ;;
     claude)
@@ -120,14 +124,14 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: .claude/CLAUDE.md exists. Backing up.${NC}"
             mv .claude/CLAUDE.md .claude/CLAUDE.md.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/claude/CLAUDE.md" .claude/CLAUDE.md
+        cp "$WORK_DIR/templates/shims/claude/CLAUDE.md" .claude/CLAUDE.md
         echo -e "${GREEN}Installed: .claude/CLAUDE.md${NC}"
-        if [ -f "$WORK_DIR/templates/installation/shims/claude/settings.json" ]; then
+        if [ -f "$WORK_DIR/templates/shims/claude/settings.json" ]; then
             if [ -f ".claude/settings.json" ]; then
                 echo -e "${YELLOW}Warning: .claude/settings.json exists. Backing up.${NC}"
                 mv .claude/settings.json .claude/settings.json.bak
             fi
-            cp "$WORK_DIR/templates/installation/shims/claude/settings.json" .claude/settings.json
+            cp "$WORK_DIR/templates/shims/claude/settings.json" .claude/settings.json
             echo -e "${GREEN}Installed: .claude/settings.json${NC}"
         fi
         ;;
@@ -137,10 +141,10 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: .cursorrules exists. Backing up.${NC}"
             mv .cursorrules .cursorrules.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/cursor/.cursorrules" .cursorrules
+        cp "$WORK_DIR/templates/shims/cursor/.cursorrules" .cursorrules
         echo -e "${GREEN}Installed: .cursorrules${NC}"
-        if [ -f "$WORK_DIR/templates/installation/shims/cursor/nightshift.mdc" ]; then
-            cp "$WORK_DIR/templates/installation/shims/cursor/nightshift.mdc" .cursor/rules/nightshift.mdc
+        if [ -f "$WORK_DIR/templates/shims/cursor/nightshift.mdc" ]; then
+            cp "$WORK_DIR/templates/shims/cursor/nightshift.mdc" .cursor/rules/nightshift.mdc
             echo -e "${GREEN}Installed: .cursor/rules/nightshift.mdc${NC}"
         fi
         ;;
@@ -149,7 +153,7 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: GEMINI.md exists. Backing up.${NC}"
             mv GEMINI.md GEMINI.md.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/gemini/GEMINI.md" GEMINI.md
+        cp "$WORK_DIR/templates/shims/gemini/GEMINI.md" GEMINI.md
         echo -e "${GREEN}Installed: GEMINI.md${NC}"
         ;;
     codex)
@@ -157,7 +161,7 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: AGENTS.md exists. Backing up.${NC}"
             mv AGENTS.md AGENTS.md.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/codex/AGENTS.md" AGENTS.md
+        cp "$WORK_DIR/templates/shims/codex/AGENTS.md" AGENTS.md
         echo -e "${GREEN}Installed: AGENTS.md${NC}"
         ;;
     *)
