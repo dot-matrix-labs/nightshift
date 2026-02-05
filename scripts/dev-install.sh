@@ -66,7 +66,7 @@ echo "   ${TEMPLATES_LINK} -> ${PROJECT_ROOT}/templates"
 
 # Step 5: Link command files
 echo "🔗 Linking commands..."
-for cmd in "${PROJECT_ROOT}/commands"/*.md; do
+for cmd in "${PROJECT_ROOT}/templates/commands"/*.md; do
     if [ -f "${cmd}" ]; then
         cmd_name=$(basename "${cmd}")
         cmd_link="${OPENCODE_CONFIG}/command/${cmd_name}"
@@ -79,6 +79,23 @@ for cmd in "${PROJECT_ROOT}/commands"/*.md; do
         echo "   ${cmd_name} -> ${cmd}"
     fi
 done
+
+# Step 6: Validate opencode.json
+echo ""
+echo "🔍 Validating opencode.json..."
+OPENCODE_JSON="${OPENCODE_CONFIG}/opencode.json"
+if [ -f "${OPENCODE_JSON}" ]; then
+    if python3 -c "import json; json.load(open('${OPENCODE_JSON}'))" 2>/dev/null || \
+       node -e "JSON.parse(require('fs').readFileSync('${OPENCODE_JSON}', 'utf8'))" 2>/dev/null; then
+        echo "   ✅ opencode.json is valid"
+    else
+        echo "   ❌ opencode.json is malformed - installation may fail"
+        echo "   Consider running: rm ${OPENCODE_JSON} && opencode --init"
+        exit 1
+    fi
+else
+    echo "   ⚠️  opencode.json not found - run 'opencode --init' to create it"
+fi
 
 echo ""
 echo "✅ Development installation complete!"
