@@ -123,7 +123,7 @@ For manual installation or building from source, see [CLI Installation Guide](./
 
 ### Product Vision
 
-- [Vision](./docs/product_vision/1-vision.md)
+- [Vision](./docs/product-vision/1-vision.md)
 - [Architecture](./docs/technical/architecture.md)
 
 ---

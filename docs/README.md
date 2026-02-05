@@ -1,8 +1,33 @@
-# Documentation Map
+# Nightshift Documentation
 
-This is the entry point for the Nightshift "Documentation Fractal".
+The entry point for the Nightshift "Documentation Fractal".
 
-## 📚 Table of Contents
+## Installation
+
+To adopt Nightshift in your project, give this prompt to your AI agent:
+
+```
+Agent: I want to adopt the Nightshift methodology for this repository.
+
+1. Read the Nightshift installation guide at:
+   https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/docs/README.md
+
+2. Run the installer for your agent:
+   curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
+
+   Or for specific vendors:
+   - Claude Code: curl ... | bash -s -- claude
+   - Cursor:     curl ... | bash -s -- cursor
+   - Gemini CLI: curl ... | bash -s -- gemini
+   - Codex CLI:  curl ... | bash -s -- codex
+
+3. After installation:
+   - Check .nightshift/ directory exists
+   - Check vendor shim file is installed
+   - Restart your agent and create branch ns/session/nightshift-bootstrap
+```
+
+## Table of Contents
 
 ### 1. [Methodology](./methodology/README.md)
 
@@ -53,7 +78,6 @@ _Background investigations and hypotheses._
 
 ---
 
-## 🔍 Quick Links
+## Quick Links
 
 - [CLI Installation](./cli-installation.md)
-- [Template Installation](../docs/README.md)
