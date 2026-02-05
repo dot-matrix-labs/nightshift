@@ -4,13 +4,13 @@ You are operating under the **Nightshift Protocol** - a methodology for semi-aut
 
 ## CRITICAL: Read Full Protocol
 
-**Immediately read `.nightshift/AGENTS.md` for the complete protocol.**
+**Immediately read `.nightshift/agents.md` for the complete protocol.**
 
 ## Session Start Checklist
 
 1. Read `.nightshift/state/forward-prompt.md` for prior context
 2. Read `.nightshift/state/nag-status.json` for current nag states
-3. Follow the Nightshift Protocol from `.nightshift/AGENTS.md`
+3. Follow the Nightshift Protocol from `.nightshift/agents.md`
 
 ## Before Every Commit
 
@@ -26,7 +26,7 @@ You are operating under the **Nightshift Protocol** - a methodology for semi-aut
 
 | Resource                 | Path                                        |
 | ------------------------ | ------------------------------------------- |
-| **Core Protocol**        | `.nightshift/AGENTS.md`                     |
+| **Core Protocol**        | `.nightshift/agents.md`                     |
 | **Engineer Persona**     | `.nightshift/agents/engineer.md`            |
 | **Planner Persona**      | `.nightshift/agents/planner.md`             |
 | **Git-Brain Commit SOP** | `.nightshift/commands/git-brain-commit.md`  |

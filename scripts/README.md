@@ -7,6 +7,7 @@ Utility scripts for development and release.
 ### `dev-install.sh`
 
 Sets up the development environment:
+
 - Installs dependencies
 - Configures git hooks
 - Prepares the workspace
@@ -26,16 +27,18 @@ Handles release packaging and versioning.
 ## Running Scripts
 
 Shell scripts:
+
 ```bash
 ./scripts/dev-install.sh
 ```
 
 TypeScript scripts (if any):
+
 ```bash
 bun run scripts/<script>.ts
 ```
 
 ## Navigation
 
-- [Return to Root](../START_HERE.md)
+- [Return to Root](../README.md)
 - [Development Docs](../docs/development/)

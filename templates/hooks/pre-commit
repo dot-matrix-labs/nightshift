@@ -1,70 +1,57 @@
-#!/usr/bin/env node
-/**
- * Nightshift Pre-Commit Hook
- * 
- * Enforces nag completion before allowing commits.
- * 
- * Installation:
- *   cp templates/hooks/pre-commit .git/hooks/pre-commit
- *   chmod +x .git/hooks/pre-commit
- * 
- * Bypass (human-supervised):
- *   NIGHTSHIFT_BYPASS=1 git commit -m "message"
- */
+#!/bin/bash
+#
+# Nightshift Pre-Commit Hook
+# 
+# Enforces nag completion before allowing commits.
+# Blocks commit if any nag in .nightshift/state/nag-status.json is "NOK".
+#
+# Installation:
+#   cp .nightshift/hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Bypass (human-supervised):
+#   NIGHTSHIFT_BYPASS=1 git commit -m "message"
+#
 
-const fs = require('fs');
-const path = require('path');
+NAG_STATUS_PATH="$(git rev-parse --show-toplevel)/.nightshift/state/nag-status.json"
 
-const NAG_STATUS_PATH = path.join(process.cwd(), '.nightshift', 'nag-status.json');
+# Bypass check
+if [ -n "$NIGHTSHIFT_BYPASS" ]; then
+    echo "⚠️  Nightshift nag check bypassed"
+    exit 0
+fi
 
-function main() {
-    // Bypass check
-    if (process.env.NIGHTSHIFT_BYPASS) {
-        console.log('⚠️  Nightshift nag check bypassed');
-        return 0;
-    }
+# Skip if no nag status file
+[ -f "$NAG_STATUS_PATH" ] || exit 0
 
-    // Skip if no nag status file
-    if (!fs.existsSync(NAG_STATUS_PATH)) {
-        return 0;
-    }
+# Find incomplete nags (requires jq)
+if command -v jq &> /dev/null; then
+    INCOMPLETE=$(jq -r '.nags | to_entries[] | select(.value != "OK") | .key' "$NAG_STATUS_PATH" 2>/dev/null)
+else
+    # Fallback: check for NOK string
+    if grep -q '"NOK"' "$NAG_STATUS_PATH" 2>/dev/null; then
+        INCOMPLETE="(install jq for detailed nag info)"
+    else
+        INCOMPLETE=""
+    fi
+fi
 
-    // Parse nag status
-    let status;
-    try {
-        status = JSON.parse(fs.readFileSync(NAG_STATUS_PATH, 'utf-8'));
-    } catch {
-        return 0; // Allow commit if can't parse
-    }
+# Allow if all nags are OK
+[ -z "$INCOMPLETE" ] && exit 0
 
-    // Find incomplete nags
-    // Expects: { "nags": { "nag-name": "OK" | "NOK" } }
-    const incomplete = Object.entries(status.nags || {})
-        .filter(([_, status]) => status !== 'OK')
-        .map(([name]) => name);
-
-    if (incomplete.length === 0) {
-        return 0;
-    }
-
-    // Block commit
-    const box = (text, pad = 56) => '║  ' + text.padEnd(pad) + '  ║';
-
-    console.error('');
-    console.error('╔════════════════════════════════════════════════════════════╗');
-    console.error('║            ❌ COMMIT BLOCKED - INCOMPLETE NAGS             ║');
-    console.error('╠════════════════════════════════════════════════════════════╣');
-    incomplete.forEach(name => console.error(box('• ' + name)));
-    console.error('╠════════════════════════════════════════════════════════════╣');
-    console.error(box('Complete quality checks, then run:'));
-    console.error(box('  node .nightshift/hooks/nag-helper.js complete'));
-    console.error(box(''));
-    console.error(box('To bypass (human-supervised only):'));
-    console.error(box('  NIGHTSHIFT_BYPASS=1 git commit ...'));
-    console.error('╚════════════════════════════════════════════════════════════╝');
-    console.error('');
-
-    return 1;
-}
-
-process.exit(main());
+# Block commit
+echo ""
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║            ❌ COMMIT BLOCKED - INCOMPLETE NAGS             ║"
+echo "╠════════════════════════════════════════════════════════════╣"
+while IFS= read -r nag; do
+    printf "║  • %-54s  ║\n" "$nag"
+done <<< "$INCOMPLETE"
+echo "╠════════════════════════════════════════════════════════════╣"
+echo "║  Fix issues, then run: /update-nag-status                 ║"
+echo "║                                                            ║"
+echo "║  To bypass (human-supervised only):                        ║"
+echo "║    NIGHTSHIFT_BYPASS=1 git commit ...                      ║"
+echo "╚════════════════════════════════════════════════════════════╝"
+echo ""
+exit 1

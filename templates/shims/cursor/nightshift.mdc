@@ -9,7 +9,7 @@ You are operating under the **Nightshift Protocol**.
 
 ## CRITICAL: Read Full Protocol
 
-**Immediately read `.nightshift/AGENTS.md` for the complete protocol.**
+**Immediately read `.nightshift/agents.md` for the complete protocol.**
 
 ## Session Start
 
@@ -25,7 +25,7 @@ You are operating under the **Nightshift Protocol**.
 
 ## Key Files
 
-- Protocol: `.nightshift/AGENTS.md`
+- Protocol: `.nightshift/agents.md`
 - Persona: `.nightshift/agents/engineer.md`
 - New Module Workflow: `.nightshift/commands/new-module-development.md`
 - Nag Status: `.nightshift/state/nag-status.json`

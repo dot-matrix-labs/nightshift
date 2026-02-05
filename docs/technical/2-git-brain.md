@@ -57,7 +57,7 @@ Uses the 'jsonwebtoken' library.
 <!--
 GIT_BRAIN_METADATA:
 {
-  "retroactive_prompt": "Implement JWT middleware using templates/agents/security-engineer.md and enforcing templates/nags/security-nag.md",
+  "retroactive_prompt": "Implement JWT middleware using templates/agents/engineer.md and enforcing templates/nags/commit-discipline-nag.md",
   "expectedOutcome": "Requests without valid tokens should return 401",
   "contextSummary": "Securing API endpoints for phase 2",
   "agentId": "coder-alpha-1",

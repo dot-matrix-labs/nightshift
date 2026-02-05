@@ -72,7 +72,7 @@ else
 fi
 
 # Verify the download worked
-if [ ! -d "$WORK_DIR/templates/installation/nightshift" ]; then
+if [ ! -f "$WORK_DIR/templates/agents.md" ]; then
     echo -e "${RED}Error: Failed to download templates. Check your internet connection.${NC}"
     exit 1
 fi
@@ -86,7 +86,11 @@ if [ -d ".nightshift" ]; then
     rm -rf .nightshift.bak
     mv .nightshift .nightshift.bak
 fi
-cp -r "$WORK_DIR/templates/installation/nightshift" .nightshift
+
+# Create directory and copy all templates EXCEPT shims
+mkdir -p .nightshift
+cp -r "$WORK_DIR/templates/"* .nightshift/
+rm -rf .nightshift/shims
 
 # IMPORTANT: Ensure NO .git folder exists (tarball shouldn't have one, but be paranoid)
 rm -rf .nightshift/.git 2>/dev/null || true
@@ -111,23 +115,23 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: opencode.json exists. Backing up.${NC}"
             mv opencode.json opencode.json.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/opencode.json" opencode.json
+        cp "$WORK_DIR/templates/shims/opencode/opencode.json" opencode.json
         echo -e "${GREEN}Installed: opencode.json${NC}"
         ;;
     claude)
         mkdir -p .claude
-        if [ -f ".claude/CLAUDE.md" ]; then
-            echo -e "${YELLOW}Warning: .claude/CLAUDE.md exists. Backing up.${NC}"
-            mv .claude/CLAUDE.md .claude/CLAUDE.md.bak
+        if [ -f ".claude/claude.md" ]; then
+            echo -e "${YELLOW}Warning: .claude/claude.md exists. Backing up.${NC}"
+            mv .claude/claude.md .claude/claude.md.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/claude/CLAUDE.md" .claude/CLAUDE.md
-        echo -e "${GREEN}Installed: .claude/CLAUDE.md${NC}"
-        if [ -f "$WORK_DIR/templates/installation/shims/claude/settings.json" ]; then
+        cp "$WORK_DIR/templates/shims/claude/claude.md" .claude/claude.md
+        echo -e "${GREEN}Installed: .claude/claude.md${NC}"
+        if [ -f "$WORK_DIR/templates/shims/claude/settings.json" ]; then
             if [ -f ".claude/settings.json" ]; then
                 echo -e "${YELLOW}Warning: .claude/settings.json exists. Backing up.${NC}"
                 mv .claude/settings.json .claude/settings.json.bak
             fi
-            cp "$WORK_DIR/templates/installation/shims/claude/settings.json" .claude/settings.json
+            cp "$WORK_DIR/templates/shims/claude/settings.json" .claude/settings.json
             echo -e "${GREEN}Installed: .claude/settings.json${NC}"
         fi
         ;;
@@ -137,28 +141,28 @@ case "$VENDOR" in
             echo -e "${YELLOW}Warning: .cursorrules exists. Backing up.${NC}"
             mv .cursorrules .cursorrules.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/cursor/.cursorrules" .cursorrules
+        cp "$WORK_DIR/templates/shims/cursor/.cursorrules" .cursorrules
         echo -e "${GREEN}Installed: .cursorrules${NC}"
-        if [ -f "$WORK_DIR/templates/installation/shims/cursor/nightshift.mdc" ]; then
-            cp "$WORK_DIR/templates/installation/shims/cursor/nightshift.mdc" .cursor/rules/nightshift.mdc
+        if [ -f "$WORK_DIR/templates/shims/cursor/nightshift.mdc" ]; then
+            cp "$WORK_DIR/templates/shims/cursor/nightshift.mdc" .cursor/rules/nightshift.mdc
             echo -e "${GREEN}Installed: .cursor/rules/nightshift.mdc${NC}"
         fi
         ;;
     gemini)
-        if [ -f "GEMINI.md" ]; then
-            echo -e "${YELLOW}Warning: GEMINI.md exists. Backing up.${NC}"
-            mv GEMINI.md GEMINI.md.bak
+        if [ -f "gemini.md" ]; then
+            echo -e "${YELLOW}Warning: gemini.md exists. Backing up.${NC}"
+            mv gemini.md gemini.md.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/gemini/GEMINI.md" GEMINI.md
-        echo -e "${GREEN}Installed: GEMINI.md${NC}"
+        cp "$WORK_DIR/templates/shims/gemini/gemini.md" gemini.md
+        echo -e "${GREEN}Installed: gemini.md${NC}"
         ;;
     codex)
-        if [ -f "AGENTS.md" ]; then
-            echo -e "${YELLOW}Warning: AGENTS.md exists. Backing up.${NC}"
-            mv AGENTS.md AGENTS.md.bak
+        if [ -f "agents.md" ]; then
+            echo -e "${YELLOW}Warning: agents.md exists. Backing up.${NC}"
+            mv agents.md agents.md.bak
         fi
-        cp "$WORK_DIR/templates/installation/shims/codex/AGENTS.md" AGENTS.md
-        echo -e "${GREEN}Installed: AGENTS.md${NC}"
+        cp "$WORK_DIR/templates/shims/codex/agents.md" agents.md
+        echo -e "${GREEN}Installed: agents.md${NC}"
         ;;
     *)
         echo -e "${RED}Unknown vendor: $VENDOR${NC}"
@@ -188,12 +192,12 @@ echo -e "${BLUE}Installed files:${NC}"
 echo "  .nightshift/          - Templates, commands, nags, hooks (NO .git)"
 case "$VENDOR" in
     opencode) echo "  opencode.json         - OpenCode configuration shim" ;;
-    claude)   echo "  .claude/CLAUDE.md     - Claude Code configuration shim"
+    claude)   echo "  .claude/claude.md     - Claude Code configuration shim"
               echo "  .claude/settings.json - Claude Code settings" ;;
     cursor)   echo "  .cursorrules          - Cursor configuration shim"
               echo "  .cursor/rules/nightshift.mdc - Cursor rule file" ;;
-    gemini)   echo "  GEMINI.md             - Gemini CLI configuration shim" ;;
-    codex)    echo "  AGENTS.md             - Codex CLI configuration shim" ;;
+    gemini)   echo "  gemini.md             - Gemini CLI configuration shim" ;;
+    codex)    echo "  agents.md             - Codex CLI configuration shim" ;;
 esac
 echo "  .git/hooks/pre-commit - Nag enforcement hook"
 echo "  .git/hooks/commit-msg - Commit message validation hook"
@@ -207,7 +211,7 @@ case "$VENDOR" in
         ;;
     claude)
         echo "  1. Run: claude"
-        echo "  2. Say: Read .nightshift/AGENTS.md and initialize"
+        echo "  2. Say: Read .nightshift/agents.md and initialize"
         ;;
     cursor)
         echo "  1. Open project in Cursor"
@@ -215,11 +219,11 @@ case "$VENDOR" in
         ;;
     gemini)
         echo "  1. Run: gemini"
-        echo "  2. Say: Read .nightshift/AGENTS.md and initialize"
+        echo "  2. Say: Read .nightshift/agents.md and initialize"
         ;;
     codex)
         echo "  1. Run: codex"
-        echo "  2. AGENTS.md is loaded automatically"
+        echo "  2. agents.md is loaded automatically"
         ;;
 esac
 echo ""

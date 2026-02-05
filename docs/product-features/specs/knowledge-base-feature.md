@@ -15,7 +15,7 @@ The Blitz is a high-intensity agent swarm operation used to onboard an existing 
 
 Agents first scan the entire repository to generate a single entry point file at the root.
 
-- **File:** `START_HERE.md`
+- **File:** `README.md`
 - **Purpose:** The definitive map for any agent entering the workspace. It contains the index of all canonical docs and high-level architecture diagrams.
 
 ### Phase B: Canonical Documentation
@@ -42,10 +42,10 @@ Agents generate a structured hierarchy of directories and markdown files. These 
 
 Every major code module or directory receives a localized guide.
 
-- **File:** `QUICK_START.md` (inside each module root)
+- **File:** `README.md` (inside each module root)
 - **Content:** Explains the local directory's purpose, key classes, and logic.
 - **Linking:** Must contain bidirectional links:
-    - **Up:** To the canonical `START_HERE.md` and relevant `technical/` docs.
+    - **Up:** To the canonical `README.md` and relevant `technical/` docs.
     - **Down:** To specific source files within the module.
 
 ### Phase D: Hyper-Commenting (The 3x Rule)
@@ -66,7 +66,7 @@ Changes flow from high-level intent down to low-level implementation.
 
 1.  **Trigger:** A change in feature requirements or technical strategy.
 2.  **Level 1 Update:** Worker updates `product_features/` or `technical/`.
-3.  **Level 2 Update:** Worker follows links to relevant module `QUICK_START.md` files and updates context.
+3.  **Level 2 Update:** Worker follows links to relevant module `README.md` files and updates context.
 4.  **Level 3 Update:** Worker updates the Hyper-Comments in the actual source code to reflect the new reality.
 
 ## 4. Navigation Standards
@@ -75,4 +75,4 @@ To ensure agents never get lost, the **Bidirectional Link Enforcement** is appli
 
 - Every document must link back to its parent.
 - Every summary must link forward to its children/details.
-- The `START_HERE.md` must be reachable from anywhere within 2 hops.
+- The `README.md` must be reachable from anywhere within 2 hops.

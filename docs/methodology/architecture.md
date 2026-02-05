@@ -5,10 +5,10 @@
 You have multiple AI coding assistants (OpenCode, Claude Code, Cursor, Gemini CLI, Codex). Each has its own configuration format:
 
 - OpenCode uses `opencode.json`
-- Claude Code uses `.claude/CLAUDE.md`
+- Claude Code uses `.claude/claude.md`
 - Cursor uses `.cursorrules`
-- Gemini CLI uses `GEMINI.md`
-- Codex uses `AGENTS.md`
+- Gemini CLI uses `gemini.md`
+- Codex uses `agents.md`
 
 **How do you maintain Nightshift templates across all of them without duplication?**
 
@@ -22,17 +22,17 @@ Nightshift uses a **two-layer architecture**:
 ```
 YOUR_PROJECT/
 ├── .nightshift/              # ← Canonical (source of truth)
-│   ├── AGENTS.md
+│   ├── agents.md
 │   ├── agents/
 │   ├── commands/
 │   ├── nags/
 │   └── state/
 │
 ├── opencode.json             # ← Shim for OpenCode
-├── .claude/CLAUDE.md         # ← Shim for Claude Code
+├── .claude/claude.md         # ← Shim for Claude Code
 ├── .cursorrules              # ← Shim for Cursor
-├── GEMINI.md                 # ← Shim for Gemini CLI
-└── AGENTS.md                 # ← Shim for Codex
+├── gemini.md                 # ← Shim for Gemini CLI
+└── agents.md                 # ← Shim for Codex
 ```
 
 ## Why Separate?
@@ -41,7 +41,7 @@ YOUR_PROJECT/
 
 **Problem**: Updating protocols in 5 different config files is error-prone.
 
-**Solution**: Update `.nightshift/AGENTS.md` once. All shims reference it.
+**Solution**: Update `.nightshift/agents.md` once. All shims reference it.
 
 ### 2. Vendor Independence
 
@@ -70,7 +70,7 @@ YOUR_PROJECT/
 
 ```json
 {
-    "instructions": [".nightshift/AGENTS.md"],
+    "instructions": [".nightshift/agents.md"],
 
     "agent": {
         "nightshift": {
@@ -89,16 +89,16 @@ YOUR_PROJECT/
 
 **Key**: `{file:...}` syntax points to canonical files.
 
-### Claude Code Shim (`.claude/CLAUDE.md`)
+### Claude Code Shim (`.claude/claude.md`)
 
 ```markdown
 # Nightshift Protocol
 
-**Immediately read `.nightshift/AGENTS.md` for the complete protocol.**
+**Immediately read `.nightshift/agents.md` for the complete protocol.**
 
 ## Key Resources
 
-- Core Protocol: `.nightshift/AGENTS.md`
+- Core Protocol: `.nightshift/agents.md`
 - Engineer Persona: `.nightshift/agents/engineer.md`
 - Git-Brain Commits: `.nightshift/commands/git-brain-commit.md`
 ```
@@ -109,7 +109,7 @@ YOUR_PROJECT/
 
 ```markdown
 You are operating under the Nightshift Protocol.
-Read `.nightshift/AGENTS.md` for full protocol instructions.
+Read `.nightshift/agents.md` for full protocol instructions.
 ```
 
 **Key**: Simple reference to canonical protocol.
@@ -118,11 +118,11 @@ Read `.nightshift/AGENTS.md` for full protocol instructions.
 
 | Type                         | Location                            | Examples                                       |
 | ---------------------------- | ----------------------------------- | ---------------------------------------------- |
-| **Protocols**                | Canonical (`.nightshift/`)          | AGENTS.md, engineer.md                         |
+| **Protocols**                | Canonical (`.nightshift/`)          | agents.md, engineer.md                         |
 | **Commands/SOPs**            | Canonical (`.nightshift/commands/`) | git-brain-commit.md, new-module-development.md |
 | **Nags**                     | Canonical (`.nightshift/nags/`)     | javascript-nag.md                              |
 | **State**                    | Canonical (`.nightshift/state/`)    | nag-status.json, forward-prompt.md             |
-| **Vendor Integration**       | Shim                                | opencode.json, CLAUDE.md                       |
+| **Vendor Integration**       | Shim                                | opencode.json, claude.md                       |
 | **Vendor-Specific Settings** | Shim                                | `.claude/settings.json` permissions            |
 
 ## Example: Adding a New Command
@@ -130,9 +130,9 @@ Read `.nightshift/AGENTS.md` for full protocol instructions.
 **Bad (duplication)**:
 
 1. Add to `opencode.json` ❌
-2. Add to `.claude/CLAUDE.md` ❌
-3. Add to `GEMINI.md` ❌
-4. Add to `AGENTS.md` (Codex) ❌
+2. Add to `.claude/claude.md` ❌
+3. Add to `gemini.md` ❌
+4. Add to `agents.md` (Codex) ❌
 
 **Good (canonical)**:
 
@@ -147,7 +147,7 @@ Read `.nightshift/AGENTS.md` for full protocol instructions.
 ```
 
 ```markdown
-<!-- CLAUDE.md -->
+<!-- claude.md -->
 
 - **"My command"**: Follow `.nightshift/commands/my-command.md`
 ```
@@ -205,7 +205,7 @@ curl -fsSL .../install-templates.sh | bash -s -- opencode
 ```json
 // GOOD: Pointing to canonical protocol
 {
-    "instructions": [".nightshift/AGENTS.md"]
+    "instructions": [".nightshift/agents.md"]
 }
 ```
 
@@ -213,7 +213,7 @@ curl -fsSL .../install-templates.sh | bash -s -- opencode
 
 Already have configs in `opencode.json`? Migrate to canonical:
 
-1. **Extract**: Move protocol text to `.nightshift/AGENTS.md`
+1. **Extract**: Move protocol text to `.nightshift/agents.md`
 2. **Reference**: Update `opencode.json` to use `{file:...}`
 3. **Add shims**: Install shims for other vendors
 4. **Consolidate**: Remove duplicated content

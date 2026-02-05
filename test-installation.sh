@@ -37,7 +37,7 @@ echo "✅ .nightshift/ exists and is clean (no .git)"
 
 # Check required files
 REQUIRED_FILES=(
-    ".nightshift/AGENTS.md"
+    ".nightshift/agents.md"
     ".nightshift/agents/engineer.md"
     ".nightshift/agents/planner.md"
     ".nightshift/commands/git-brain-commit.md"
@@ -93,18 +93,18 @@ VENDOR_FOUND=""
 if [ -f "opencode.json" ]; then
     VENDOR_FOUND="OpenCode"
     echo "✅ opencode.json found"
-elif [ -f ".claude/CLAUDE.md" ]; then
+elif [ -f ".claude/claude.md" ]; then
     VENDOR_FOUND="Claude Code"
-    echo "✅ .claude/CLAUDE.md found"
+    echo "✅ .claude/claude.md found"
 elif [ -f ".cursorrules" ]; then
     VENDOR_FOUND="Cursor"
     echo "✅ .cursorrules found"
-elif [ -f "GEMINI.md" ]; then
+elif [ -f "gemini.md" ]; then
     VENDOR_FOUND="Gemini CLI"
-    echo "✅ GEMINI.md found"
-elif [ -f "AGENTS.md" ]; then
+    echo "✅ gemini.md found"
+elif [ -f "agents.md" ]; then
     VENDOR_FOUND="Codex CLI"
-    echo "✅ AGENTS.md found"
+    echo "✅ agents.md found"
 else
     echo "❌ No vendor shim found"
     exit 1
@@ -149,11 +149,11 @@ echo "🔍 Validating template JSON files..."
 TEMPLATE_ERRORS=0
 
 # Check opencode.json template
-if [ -f "templates/installation/shims/opencode.json" ]; then
-    if jq . templates/installation/shims/opencode.json > /dev/null 2>&1; then
-        echo "✅ templates/installation/shims/opencode.json is valid JSON"
+if [ -f "templates/shims/opencode/opencode.json" ]; then
+    if jq . templates/shims/opencode/opencode.json > /dev/null 2>&1; then
+        echo "✅ templates/shims/opencode/opencode.json is valid JSON"
     else
-        echo "❌ templates/installation/shims/opencode.json is INVALID JSON"
+        echo "❌ templates/shims/opencode/opencode.json is INVALID JSON"
         TEMPLATE_ERRORS=$((TEMPLATE_ERRORS + 1))
     fi
 fi
