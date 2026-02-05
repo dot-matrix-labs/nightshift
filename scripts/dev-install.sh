@@ -38,6 +38,7 @@ echo ""
 echo "📁 Creating OpenCode config directories..."
 mkdir -p "${OPENCODE_CONFIG}/plugin"
 mkdir -p "${OPENCODE_CONFIG}/command"
+mkdir -p "${OPENCODE_CONFIG}/agents"
 mkdir -p "${PLUGIN_DIR}"
 
 # Step 3: Link the main plugin file
@@ -80,6 +81,22 @@ for cmd in "${PROJECT_ROOT}/templates/commands"/*.md; do
     fi
 done
 
+# Step 5b: Link agent files
+echo "🔗 Linking agents..."
+for agent in "${PROJECT_ROOT}/templates/agents"/*.md; do
+    if [ -f "${agent}" ]; then
+        agent_name=$(basename "${agent}")
+        agent_link="${OPENCODE_CONFIG}/agents/${agent_name}"
+
+        if [ -e "${agent_link}" ] || [ -L "${agent_link}" ]; then
+            rm -rf "${agent_link}"
+        fi
+
+        ln -s "${agent}" "${agent_link}"
+        echo "   ${agent_name} -> ${agent}"
+    fi
+done
+
 # Step 6: Validate opencode.json
 echo ""
 echo "🔍 Validating opencode.json..."
@@ -97,6 +114,42 @@ else
     echo "   ⚠️  opencode.json not found - run 'opencode --init' to create it"
 fi
 
+# Step 7: Add Nightshift instructions to opencode.json
+echo ""
+echo "📝 Adding Nightshift instructions to opencode.json..."
+DOC_INDEX="${PROJECT_ROOT}/templates/commands/docs-index.md"
+if [ -f "${DOC_INDEX}" ]; then
+    if command -v python3 &> /dev/null; then
+        python3 << PYTHON_SCRIPT
+import json
+import sys
+
+opencode_json = "${OPENCODE_CONFIG}/opencode.json"
+try:
+    with open(opencode_json, 'r') as f:
+        config = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError):
+    config = {}
+
+if 'instructions' not in config:
+    config['instructions'] = []
+
+nightshift_instructions = "${DOC_INDEX}"
+if nightshift_instructions not in config['instructions']:
+    config['instructions'].append(nightshift_instructions)
+    with open(opencode_json, 'w') as f:
+        json.dump(config, f, indent=4)
+    print(f"   ✅ Added ${DOC_INDEX} to instructions")
+else:
+    print("   ✅ Nightshift instructions already configured")
+PYTHON_SCRIPT
+    else
+        echo "   ⚠️  python3 not available - skip instructions config"
+    fi
+else
+    echo "   ⚠️  docs-index.md not found - skipping instructions config"
+fi
+
 echo ""
 echo "✅ Development installation complete!"
 echo ""
@@ -106,6 +159,8 @@ echo "   2. Any changes to src/ will trigger a rebuild"
 echo "   3. OpenCode will use the linked plugin automatically"
 echo ""
 echo "🔍 Verify installation:"
-echo "   ls -la ${OPENCODE_CONFIG}/plugin/nightshift.js"
-echo "   ls -la ${PLUGIN_DIR}/templates"
+echo "   Plugin: ls -la ${OPENCODE_CONFIG}/plugin/nightshift.js"
+echo "   Templates: ls -la ${PLUGIN_DIR}/templates"
+echo "   Commands: ls -la ${OPENCODE_CONFIG}/command/"
+echo "   Agents: ls -la ${OPENCODE_CONFIG}/agents/"
 echo ""
