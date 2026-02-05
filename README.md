@@ -40,19 +40,19 @@ Use our one-liner installer to set up Nightshift templates for your AI coding ag
 
 ```bash
 # OpenCode (default)
-curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/install-templates.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
 
 # Claude Code
-curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/install-templates.sh | bash -s -- claude
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- claude
 
 # Cursor
-curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/install-templates.sh | bash -s -- cursor
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- cursor
 
 # Gemini CLI
-curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/install-templates.sh | bash -s -- gemini
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- gemini
 
 # OpenAI Codex CLI
-curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/install-templates.sh | bash -s -- codex
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- codex
 ```
 
 **What This Does:**
@@ -62,6 +62,33 @@ curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/instal
 3. Installs git hooks to enforce quality gates (nags) before commits
 
 **See [Installation Guide](./templates/installation/README.md) for full documentation.**
+
+#### Copy-Paste Agent Prompt
+
+Give this prompt to your AI agent to bootstrap Nightshift in your codebase:
+
+```
+Agent: I want to adopt the Nightshift methodology for this repository.
+
+1. Read the Nightshift installation guide at:
+   https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/templates/installation/README.md
+
+2. Run the appropriate installer for your agent:
+   curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
+
+   Or for specific vendors:
+   - Claude Code: curl ... | bash -s -- claude
+   - Cursor:     curl ... | bash -s -- cursor
+   - Gemini CLI: curl ... | bash -s -- gemini
+   - Codex CLI:  curl ... | bash -s -- codex
+
+3. After installation, verify and bootstrap:
+   - Check .nightshift/ directory exists with templates
+   - Check vendor shim file is installed (e.g., CLAUDE.md, .cursorrules)
+   - Check git hooks are in .git/hooks/
+   - Run the post-install checklist at .nightshift/templates/agents/post-install-checklist.md
+   - Restart your agent client and create a GitBrain branch ns/session/nightshift-bootstrap
+```
 
 #### What You Get
 
@@ -91,7 +118,7 @@ The Nightshift Service is a standalone CLI/TUI that manages multiple agents, han
 
 ```bash
 # Install via curl (Linux & macOS)
-curl -fsSL https://raw.githubusercontent.com/lucky-tensor/nightshift/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install.sh | bash
 
 # Run
 nightshift

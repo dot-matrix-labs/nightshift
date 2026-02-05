@@ -3,22 +3,22 @@ set -e
 
 # Nightshift Development Installation Script
 #
-# This script sets up Nightshift for local development by:
-# 1. Building the plugin with all dependencies bundled
-# 2. Linking the built file to OpenCode's global config
-# 3. Linking templates and commands
+# This script configures the Nightshift development environment for OpenCode.
+# It builds the plugin and generates an opencode.json with agent personas.
 #
-# After running this, you can use `bun run dev` to watch for changes
+# Usage: ./scripts/dev-install.sh
+#
+# This script is designed to be vendor-agnostic - CLI tools that integrate
+# with Nightshift can invoke this script during their own installation flow.
 
-OPENCODE_CONFIG="${HOME}/.config/opencode"
-PLUGIN_DIR="${OPENCODE_CONFIG}/plugin/nightshift"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OPENCODE_JSON="${PROJECT_ROOT}/opencode.json"
+TEMPLATE="${PROJECT_ROOT}/templates/opencode/opencode.json.hbs"
+COMMANDS_DIR="${PROJECT_ROOT}/.opencode/command"
 
 echo "🏭 Nightshift Development Installation"
 echo "========================================"
-echo ""
 echo "Project root: ${PROJECT_ROOT}"
-echo "OpenCode config: ${OPENCODE_CONFIG}"
 echo ""
 
 # Step 1: Build the plugin
@@ -30,46 +30,34 @@ if [ ! -f "${PROJECT_ROOT}/dist/index.js" ]; then
     echo "❌ Build failed - dist/index.js not found"
     exit 1
 fi
-
-echo "✅ Build complete ($(du -h "${PROJECT_ROOT}/dist/index.js" | cut -f1))"
+echo "✅ Build complete"
 echo ""
 
-# Step 2: Create OpenCode config directories
-echo "📁 Creating OpenCode config directories..."
-mkdir -p "${OPENCODE_CONFIG}/plugin"
-mkdir -p "${OPENCODE_CONFIG}/command"
-mkdir -p "${PLUGIN_DIR}"
+# Step 2: Generate opencode.json from template if invalid or missing
+echo "📝 Configuring opencode.json..."
 
-# Step 3: Link the main plugin file
-echo "🔗 Linking plugin file..."
-PLUGIN_LINK="${OPENCODE_CONFIG}/plugin/nightshift.js"
-
-if [ -e "${PLUGIN_LINK}" ] || [ -L "${PLUGIN_LINK}" ]; then
-    rm -rf "${PLUGIN_LINK}"
-    echo "   Removed existing file/link"
+if [ -f "${OPENCODE_JSON}" ]; then
+    # Check if valid JSON
+    if node -e "require('fs').readFileSync('${OPENCODE_JSON}', 'utf8')" 2>/dev/null; then
+        echo "   ✅ opencode.json is valid - preserving"
+    else
+        echo "   ⚠️  opencode.json is invalid - regenerating from template"
+        cp "${TEMPLATE}" "${OPENCODE_JSON}"
+        echo "   ✅ Regenerated opencode.json"
+    fi
+else
+    echo "   📄 Generating opencode.json from template..."
+    cp "${TEMPLATE}" "${OPENCODE_JSON}"
+    echo "   ✅ Generated opencode.json"
 fi
 
-ln -s "${PROJECT_ROOT}/dist/index.js" "${PLUGIN_LINK}"
-echo "   ${PLUGIN_LINK} -> ${PROJECT_ROOT}/dist/index.js"
-
-# Step 4: Link templates directory
-echo "🔗 Linking templates..."
-TEMPLATES_LINK="${PLUGIN_DIR}/templates"
-
-if [ -e "${TEMPLATES_LINK}" ] || [ -L "${TEMPLATES_LINK}" ]; then
-    rm -rf "${TEMPLATES_LINK}"
-    echo "   Removed existing directory/link"
-fi
-
-ln -s "${PROJECT_ROOT}/templates" "${TEMPLATES_LINK}"
-echo "   ${TEMPLATES_LINK} -> ${PROJECT_ROOT}/templates"
-
-# Step 5: Link command files
+# Step 3: Link command files to .opencode/command/
 echo "🔗 Linking commands..."
-for cmd in "${PROJECT_ROOT}/commands"/*.md; do
+mkdir -p "${COMMANDS_DIR}"
+for cmd in "${PROJECT_ROOT}/templates/commands"/*.md; do
     if [ -f "${cmd}" ]; then
         cmd_name=$(basename "${cmd}")
-        cmd_link="${OPENCODE_CONFIG}/command/${cmd_name}"
+        cmd_link="${COMMANDS_DIR}/${cmd_name}"
 
         if [ -e "${cmd_link}" ] || [ -L "${cmd_link}" ]; then
             rm -rf "${cmd_link}"
@@ -84,11 +72,8 @@ echo ""
 echo "✅ Development installation complete!"
 echo ""
 echo "📝 Next steps:"
-echo "   1. Run 'bun run dev' to start watch mode (auto-rebuild on changes)"
-echo "   2. Any changes to src/ will trigger a rebuild"
-echo "   3. OpenCode will use the linked plugin automatically"
+echo "   1. Run 'bun run dev' to start watch mode"
+echo "   2. OpenCode will use the project opencode.json"
 echo ""
-echo "🔍 Verify installation:"
-echo "   ls -la ${OPENCODE_CONFIG}/plugin/nightshift.js"
-echo "   ls -la ${PLUGIN_DIR}/templates"
+echo "🔍 Verify: cat ${OPENCODE_JSON}"
 echo ""

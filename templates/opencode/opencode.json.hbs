@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "./templates/commands/docs-index.md"
+  ],
+  "agent": {
+    "engineer": {
+      "description": "Autonomous Engineer - Implements features and fixes bugs",
+      "mode": "primary",
+      "prompt": "{file:./templates/agents/engineer.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    },
+    "planner": {
+      "description": "Strategic Planner - Plans and analyzes tasks",
+      "mode": "primary",
+      "prompt": "{file:./templates/agents/planner.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false
+      }
+    },
+    "curator": {
+      "description": "Knowledge Curator - Manages documentation and context",
+      "mode": "subagent",
+      "prompt": "{file:./templates/agents/curator.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": false
+      }
+    },
+    "git-supervisor": {
+      "description": "Git Supervisor - Manages branches and commits",
+      "mode": "subagent",
+      "prompt": "{file:./templates/agents/git-supervisor.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": true
+      }
+    },
+    "pm-supervisor": {
+      "description": "PM Supervisor - Project management and task tracking",
+      "mode": "subagent",
+      "prompt": "{file:./templates/agents/pm-supervisor.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": false
+      }
+    },
+    "finance-supervisor": {
+      "description": "Finance Supervisor - Monitors costs and budgets",
+      "mode": "subagent",
+      "prompt": "{file:./templates/agents/finance-supervisor.md}",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false
+      }
+    }
+  }
+}
