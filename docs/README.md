@@ -56,4 +56,4 @@ _Background investigations and hypotheses._
 ## 🔍 Quick Links
 
 - [CLI Installation](./cli-installation.md)
-- [Template Installation](../templates/installation/README.md)
+- [Template Installation](../docs/README.md)

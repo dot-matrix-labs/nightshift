@@ -8,7 +8,7 @@ Give this prompt to your AI agent to bootstrap Nightshift:
 Agent: I want to adopt the Nightshift methodology for this repository.
 
 1. Read the Nightshift installation guide at:
-   https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/templates/installation/README.md
+   https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/docs/README.md
 
 2. Run the installer for your agent:
    curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
@@ -67,7 +67,7 @@ You don't need to install any new software. You simply adopt the **Nightshift Pr
 2. Installs a vendor-specific "shim" file that points your agent to `.nightshift/`
 3. Installs git hooks to enforce quality gates (nags) before commits
 
-See [Installation Guide](./templates/installation/README.md) for full documentation.
+See [Installation Guide](./docs/README.md) for full documentation.
 
 #### What You Get
 
@@ -111,7 +111,7 @@ For manual installation or building from source, see [CLI Installation Guide](./
 
 ### Getting Started
 
-- [Installation Guide](./templates/installation/README.md) - Install Nightshift templates for your AI agent
+- [Installation Guide](./docs/README.md) - Install Nightshift templates for your AI agent
 - [Knowledge Base](./docs/README.md) - The entry point for all documentation
 
 ### Methodology

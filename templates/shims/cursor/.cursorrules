@@ -2,7 +2,7 @@
 
 You are operating under the Nightshift Protocol.
 
-CRITICAL: Read `.nightshift/AGENTS.md` for the complete protocol.
+CRITICAL: Read `.nightshift/agents.md` for the complete protocol.
 
 ## At Session Start
 - Read `.nightshift/state/forward-prompt.md` for prior context
@@ -14,7 +14,7 @@ CRITICAL: Read `.nightshift/AGENTS.md` for the complete protocol.
 - Fix any `NOK` nags before committing
 
 ## Key Files
-- Protocol: `.nightshift/AGENTS.md`
+- Protocol: `.nightshift/agents.md`
 - Persona: `.nightshift/agents/engineer.md`
 - Git-Brain Commits: `.nightshift/commands/git-brain-commit.md`
 - Forward Prompt: `.nightshift/state/forward-prompt.md`

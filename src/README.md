@@ -20,5 +20,5 @@ This directory contains the core source code for the Nightshift CLI application.
 
 ## Navigation
 
-- [Return to Root](../START_HERE.md)
+- [Return to Root](../README.md)
 - [Technical Architecture](../docs/technical/1-technical-challenges.md)

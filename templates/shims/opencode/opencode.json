@@ -1,7 +1,7 @@
 {
     "$schema": "https://opencode.ai/config.json",
 
-    "instructions": [".nightshift/AGENTS.md"],
+    "instructions": [".nightshift/agents.md"],
 
     "agent": {
         "engineer-nightshift": {
