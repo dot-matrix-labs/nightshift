@@ -13,6 +13,8 @@ set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OPENCODE_JSON="${PROJECT_ROOT}/opencode.json"
+TEMPLATE="${PROJECT_ROOT}/templates/opencode/opencode.json.hbs"
+COMMANDS_DIR="${PROJECT_ROOT}/.opencode/command"
 
 echo "🏭 Nightshift Development Installation"
 echo "========================================"
@@ -31,27 +33,40 @@ fi
 echo "✅ Build complete"
 echo ""
 
-# Step 2: Configure opencode.json
+# Step 2: Generate opencode.json from template if invalid or missing
 echo "📝 Configuring opencode.json..."
 
-# Merge agent configs into opencode.json using node
-node -e "
-const fs = require('fs');
-const config = fs.existsSync('${OPENCODE_JSON}') ? JSON.parse(fs.readFileSync('${OPENCODE_JSON}', 'utf8')) : {};
-config['\$schema'] = 'https://opencode.ai/config.json';
-config.agent = {
-  engineer: { description: 'Autonomous Engineer', mode: 'primary', prompt: '{file:./templates/agents/engineer.md}', tools: { write: true, edit: true, bash: true } },
-  planner: { description: 'Strategic Planner', mode: 'primary', prompt: '{file:./templates/agents/planner.md}', tools: { write: false, edit: false, bash: false } },
-  curator: { description: 'Knowledge Curator', mode: 'subagent', prompt: '{file:./templates/agents/curator.md}', tools: { write: true, edit: true, bash: false } },
-  'git-supervisor': { description: 'Git Supervisor', mode: 'subagent', prompt: '{file:./templates/agents/git-supervisor.md}', tools: { write: false, edit: false, bash: true } },
-  'pm-supervisor': { description: 'PM Supervisor', mode: 'subagent', prompt: '{file:./templates/agents/pm-supervisor.md}', tools: { write: true, edit: true, bash: false } },
-  'finance-supervisor': { description: 'Finance Supervisor', mode: 'subagent', prompt: '{file:./templates/agents/finance-supervisor.md}', tools: { write: false, edit: false, bash: false } }
-};
-config.instructions = ['./templates/commands/docs-index.md'];
-fs.writeFileSync('${OPENCODE_JSON}', JSON.stringify(config, null, 4));
-console.log('✅ Configured agents: engineer, planner, curator, git-supervisor, pm-supervisor, finance-supervisor');
-console.log('✅ Added docs-index.md to instructions');
-"
+if [ -f "${OPENCODE_JSON}" ]; then
+    # Check if valid JSON
+    if node -e "require('fs').readFileSync('${OPENCODE_JSON}', 'utf8')" 2>/dev/null; then
+        echo "   ✅ opencode.json is valid - preserving"
+    else
+        echo "   ⚠️  opencode.json is invalid - regenerating from template"
+        cp "${TEMPLATE}" "${OPENCODE_JSON}"
+        echo "   ✅ Regenerated opencode.json"
+    fi
+else
+    echo "   📄 Generating opencode.json from template..."
+    cp "${TEMPLATE}" "${OPENCODE_JSON}"
+    echo "   ✅ Generated opencode.json"
+fi
+
+# Step 3: Link command files to .opencode/command/
+echo "🔗 Linking commands..."
+mkdir -p "${COMMANDS_DIR}"
+for cmd in "${PROJECT_ROOT}/templates/commands"/*.md; do
+    if [ -f "${cmd}" ]; then
+        cmd_name=$(basename "${cmd}")
+        cmd_link="${COMMANDS_DIR}/${cmd_name}"
+
+        if [ -e "${cmd_link}" ] || [ -L "${cmd_link}" ]; then
+            rm -rf "${cmd_link}"
+        fi
+
+        ln -s "${cmd}" "${cmd_link}"
+        echo "   ${cmd_name} -> ${cmd}"
+    fi
+done
 
 echo ""
 echo "✅ Development installation complete!"
