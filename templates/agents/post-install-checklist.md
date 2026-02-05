@@ -120,5 +120,5 @@ Tell the user:
    2. Use /commands in OpenCode (type / to see options)
    3. Edit scripts/hooks/ to customize git hooks
 
-🔗 docs/development/agent_bootstrap_instructions.md
+🔗 docs/development/agent-bootstrap-instructions.md
 ```
