@@ -2,19 +2,30 @@
 
 ## Quick Start
 
-**Install Nightshift for your AI agent:**
+Give this prompt to your AI agent to bootstrap Nightshift:
 
-```bash
-# OpenCode (default)
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
+```
+Agent: I want to adopt the Nightshift methodology for this repository.
 
-# Claude Code, Cursor, Gemini CLI, or Codex CLI
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- <vendor>
+1. Read the Nightshift installation guide at:
+   https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/templates/installation/README.md
+
+2. Run the installer for your agent:
+   curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
+
+   Or for specific vendors:
+   - Claude Code: curl ... | bash -s -- claude
+   - Cursor:     curl ... | bash -s -- cursor
+   - Gemini CLI: curl ... | bash -s -- gemini
+   - Codex CLI:  curl ... | bash -s -- codex
+
+3. After installation:
+   - Check .nightshift/ directory exists
+   - Check vendor shim file is installed
+   - Restart your agent and create branch ns/session/nightshift-bootstrap
 ```
 
 **What you get:** `.nightshift/` templates, vendor shim, and git hooks for quality gates.
-
-See [Installation Guide](./templates/installation/README.md) for full details.
 
 ---
 
@@ -50,61 +61,13 @@ We need autonomous software factories with quality gates and structured context.
 
 You don't need to install any new software. You simply adopt the **Nightshift Protocol** to give your agents better memory, context, and quality control.
 
-#### Quick Install
-
-Use our one-liner installer to set up Nightshift templates for your AI coding agent:
-
-```bash
-# OpenCode (default)
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
-
-# Claude Code
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- claude
-
-# Cursor
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- cursor
-
-# Gemini CLI
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- gemini
-
-# OpenAI Codex CLI
-curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash -s -- codex
-```
-
-**What This Does:**
+#### What This Does
 
 1. Creates `.nightshift/` folder with canonical templates (protocols, commands, nags)
 2. Installs a vendor-specific "shim" file that points your agent to `.nightshift/`
 3. Installs git hooks to enforce quality gates (nags) before commits
 
-**See [Installation Guide](./templates/installation/README.md) for full documentation.**
-
-#### Copy-Paste Agent Prompt
-
-Give this prompt to your AI agent to bootstrap Nightshift in your codebase:
-
-```
-Agent: I want to adopt the Nightshift methodology for this repository.
-
-1. Read the Nightshift installation guide at:
-   https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/templates/installation/README.md
-
-2. Run the appropriate installer for your agent:
-   curl -fsSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/install-templates.sh | bash
-
-   Or for specific vendors:
-   - Claude Code: curl ... | bash -s -- claude
-   - Cursor:     curl ... | bash -s -- cursor
-   - Gemini CLI: curl ... | bash -s -- gemini
-   - Codex CLI:  curl ... | bash -s -- codex
-
-3. After installation, verify and bootstrap:
-   - Check .nightshift/ directory exists with templates
-   - Check vendor shim file is installed (e.g., CLAUDE.md, .cursorrules)
-   - Check git hooks are in .git/hooks/
-   - Run the post-install checklist at .nightshift/templates/agents/post-install-checklist.md
-   - Restart your agent client and create a GitBrain branch ns/session/nightshift-bootstrap
-```
+See [Installation Guide](./templates/installation/README.md) for full documentation.
 
 #### What You Get
 
