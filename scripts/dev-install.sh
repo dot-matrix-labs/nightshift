@@ -3,8 +3,13 @@ set -e
 
 # Nightshift Development Installation Script
 #
-# Sets up Nightshift for local development by building the plugin and
-# configuring opencode.json with agent personas.
+# This script configures the Nightshift development environment for OpenCode.
+# It builds the plugin and generates an opencode.json with agent personas.
+#
+# Usage: ./scripts/dev-install.sh
+#
+# This script is designed to be vendor-agnostic - CLI tools that integrate
+# with Nightshift can invoke this script during their own installation flow.
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OPENCODE_JSON="${PROJECT_ROOT}/opencode.json"
