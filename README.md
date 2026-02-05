@@ -82,12 +82,12 @@ Agent: I want to adopt the Nightshift methodology for this repository.
    - Gemini CLI: curl ... | bash -s -- gemini
    - Codex CLI:  curl ... | bash -s -- codex
 
-3. After installation, verify by checking:
-   - .nightshift/ directory exists with templates
-   - Vendor shim file is installed (e.g., CLAUDE.md, .cursorrules)
-   - Git hooks are in .git/hooks/
-
-4. Run the post-install checklist if available.
+3. After installation, verify and bootstrap:
+   - Check .nightshift/ directory exists with templates
+   - Check vendor shim file is installed (e.g., CLAUDE.md, .cursorrules)
+   - Check git hooks are in .git/hooks/
+   - Run the post-install checklist at .nightshift/templates/agents/post-install-checklist.md
+   - Restart your agent client and create a GitBrain branch ns/session/nightshift-bootstrap
 ```
 
 #### What You Get
