@@ -1,0 +1,82 @@
+name: Nightshift
+
+# Triggers when next-prompt.md is updated on main.
+# This IS the Nightshift runtime — the commit is the invocation.
+#
+# Required secrets:
+#   ANTHROPIC_API_KEY — your Anthropic API key
+#
+# Optional repository variables:
+#   NIGHTSHIFT_AUTO_ADVANCE — set to "true" to poll for PR merge and log completion
+#   NIGHTSHIFT_AGENT_CMD    — override the agent command (default: claude --print)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - next-prompt.md
+
+concurrency:
+  group: nightshift
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    name: Run agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "nightshift[bot]"
+          git config user.email "nightshift[bot]@users.noreply.github.com"
+
+      - name: Install agent CLI
+        run: |
+          npm install -g @anthropic-ai/claude-code
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Create branch
+        id: branch
+        run: |
+          BRANCH="ns/session/$(date +%Y%m%d-%H%M%S)"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+          git checkout -b "$BRANCH"
+
+      - name: Run agent
+        run: |
+          AGENT_CMD="${NIGHTSHIFT_AGENT_CMD:-claude --print}"
+          $AGENT_CMD < next-prompt.md
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CI: true
+          NIGHTSHIFT_AGENT_CMD: ${{ vars.NIGHTSHIFT_AGENT_CMD }}
+
+      - name: Push branch
+        run: git push -u origin "${{ steps.branch.outputs.name }}"
+
+      - name: Open PR
+        run: |
+          PROMPT_TITLE=$(awk 'NF && !/^#/{print; exit}' next-prompt.md | cut -c1-72)
+          gh pr create \
+            --title "${PROMPT_TITLE:-Nightshift agent session}" \
+            --body "Automated PR from Nightshift.
+
+**Branch:** \`${{ steps.branch.outputs.name }}\`
+
+**Prompt:**
+
+$(cat next-prompt.md)" \
+            --base main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

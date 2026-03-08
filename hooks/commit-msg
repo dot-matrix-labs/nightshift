@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# commit-msg: Enforces GIT_BRAIN_METADATA schema on every agent commit.
+#
+# BLOCKS if:
+#   - GIT_BRAIN_METADATA block is missing
+#   - JSON is malformed
+#   - Any required field is absent or empty
+#   - retroactive_prompt is < 50 chars
+
+COMMIT_FILE="$1"
+MSG=$(cat "$COMMIT_FILE")
+
+if ! echo "$MSG" | grep -q "GIT_BRAIN_METADATA:"; then
+  cat >&2 <<'BLOCK'
+
+COMMIT BLOCKED: GIT_BRAIN_METADATA block is missing from the commit message.
+
+Every agent commit must end with a structured metadata block. The key field is
+retroactive_prompt — not the instruction you were given, but the instruction
+you would write now, with full knowledge of what this change required, so that
+another agent could reproduce it without asking questions.
+
+Required format (append to the end of your commit message):
+
+<!--
+GIT_BRAIN_METADATA:
+{
+  "retroactive_prompt": "Specific, self-contained instruction to reproduce this change.",
+  "outcome": "Observable, verifiable result of this commit.",
+  "context": "Architectural or domain context not visible from the diff.",
+  "agent": "claude-sonnet-4-6",
+  "session": "sess_20260307_example",
+  "hints": ["ordered", "implementation", "notes"]
+}
+-->
+
+BLOCK
+  exit 1
+fi
+
+# Extract JSON between GIT_BRAIN_METADATA: and closing -->
+JSON=$(awk '/GIT_BRAIN_METADATA:/{found=1; next} found && /-->/{exit} found{print}' "$COMMIT_FILE")
+
+# Validate with the schema validator script (requires Node/Bun)
+VALIDATOR_PATH="$(git rev-parse --show-toplevel)/.nightshift/scripts/validate-metadata.mjs"
+FALLBACK_PATH="$(dirname "$(realpath "$0")")/../scripts/validate-metadata.mjs"
+
+if [ -f "$VALIDATOR_PATH" ]; then
+  echo "$JSON" | node "$VALIDATOR_PATH" >&2 || exit 1
+elif [ -f "$FALLBACK_PATH" ]; then
+  echo "$JSON" | node "$FALLBACK_PATH" >&2 || exit 1
+else
+  # Minimal inline validation if no validator script is found
+  for FIELD in retroactive_prompt outcome context agent session; do
+    if ! echo "$JSON" | grep -q "\"$FIELD\""; then
+      echo "COMMIT BLOCKED: GIT_BRAIN_METADATA missing required field: $FIELD" >&2
+      exit 1
+    fi
+  done
+fi
+
+exit 0

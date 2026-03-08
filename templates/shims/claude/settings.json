@@ -1,5 +1,0 @@
-{
-    "permissions": {
-        "allow": ["Read(.nightshift/**)", "Edit(.nightshift/state/**)"]
-    }
-}
