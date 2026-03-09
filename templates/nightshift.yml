@@ -1,0 +1,86 @@
+name: Nightshift
+
+# CI runner — one iteration of the Nightshift state machine.
+#
+# Triggered by a push to next-prompt.md on main. Runs the agent once on a
+# session branch. The agent must commit next-prompt.md with the next task
+# (or "DONE") to advance state. Merging the resulting PR lands that commit
+# on main, which triggers the next iteration.
+#
+# This mirrors what loop.sh does locally per iteration:
+#   read next-prompt.md → run agent → check commit → push → open PR
+#
+# Required secrets:
+#   ANTHROPIC_API_KEY — your Anthropic API key
+#
+# Optional repository variables:
+#   NIGHTSHIFT_AGENT_CMD — override the agent command (default: claude --print)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - next-prompt.md
+
+concurrency:
+  group: nightshift
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    name: Run agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "nightshift[bot]"
+          git config user.email "nightshift[bot]@users.noreply.github.com"
+
+      - name: Install agent CLI
+        run: npm install -g @anthropic-ai/claude-code
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Create session branch
+        id: branch
+        run: |
+          BRANCH="ns/session/$(date +%Y%m%d-%H%M%S)"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+          git checkout -b "$BRANCH"
+
+      - name: Run agent
+        run: |
+          HEAD_BEFORE=$(git rev-parse HEAD)
+          ${NIGHTSHIFT_AGENT_CMD:-claude --print} < next-prompt.md
+          HEAD_AFTER=$(git rev-parse HEAD)
+
+          if [ "$HEAD_BEFORE" = "$HEAD_AFTER" ]; then
+            echo "::error::Agent made no commit. next-prompt.md was not advanced. Halting." >&2
+            exit 1
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NIGHTSHIFT_AGENT_CMD: ${{ vars.NIGHTSHIFT_AGENT_CMD }}
+
+      - name: Push branch
+        run: git push -u origin "${{ steps.branch.outputs.name }}"
+
+      - name: Open PR
+        run: |
+          TITLE=$(grep -m1 "^[^#[:space:]]" next-prompt.md 2>/dev/null | cut -c1-72 || echo "Nightshift session")
+          gh pr create \
+            --title "${TITLE:-Nightshift session}" \
+            --body "Nightshift agent session on \`${{ steps.branch.outputs.name }}\`." \
+            --base main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

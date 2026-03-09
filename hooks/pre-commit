@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# pre-commit: next-prompt.md gate (blocking) + lint/format advisory (non-blocking).
+#
+# BLOCKS:   next-prompt.md not staged — the agent cannot advance without it
+# WARNS:    commit touches > 10 files — appended to next-prompt.md
+# ADVISES:  lint/format auto-fixed; unfixable issues appended to next-prompt.md
+#
+# NOTE: Do NOT add `set -e` here. Advisory sections must run even when
+# lint commands fail — we want to capture and annotate, not abort.
+
+STAGED=$(git diff --cached --name-only)
+REPO_ROOT=$(git rev-parse --show-toplevel)
+NEXT_PROMPT="$REPO_ROOT/next-prompt.md"
+
+# ── Planning document gate (BLOCKS) ──────────────────────────────────────────
+
+if ! echo "$STAGED" | grep -q "^next-prompt\.md$"; then
+  cat >&2 <<'BLOCK'
+
+COMMIT BLOCKED: next-prompt.md was not staged.
+
+Every commit must update next-prompt.md with a self-contained prompt describing
+the very next action for the agent. This is the mechanism by which the agent
+advances from one task to the next without human input between commits.
+
+A commit is the unit of work. next-prompt.md is the state.
+
+  git add next-prompt.md
+  git commit ...
+
+BLOCK
+  exit 1
+fi
+
+# ── Commit size advisory (WARNS, appends to next-prompt.md) ──────────────────
+
+STAGED_COUNT=$(echo "$STAGED" | grep -v "^$" | grep -v "^next-prompt\.md$" | wc -l | tr -d ' ')
+COMMIT_FILE_LIMIT=10
+
+if [ "$STAGED_COUNT" -gt "$COMMIT_FILE_LIMIT" ]; then
+  cat >&2 <<BLOCK
+
+COMMIT SIZE WARNING: This commit touches ${STAGED_COUNT} files (limit: ${COMMIT_FILE_LIMIT}).
+Commits should be small and focused — one logical change per commit.
+Consider splitting this work into multiple commits.
+This warning has been appended to next-prompt.md.
+
+BLOCK
+
+  cat >> "$NEXT_PROMPT" <<EOF
+
+---
+
+## Commit Size Warning
+
+The previous commit touched ${STAGED_COUNT} files, exceeding the recommended limit of ${COMMIT_FILE_LIMIT}.
+Commits should be small and focused — one logical change, committed frequently.
+If the next task involves many files, split it into smaller commits before pushing.
+EOF
+fi
+
+# ── Lint and format (auto-fix first, annotate remainder) ─────────────────────
+# Only runs if the project has a package.json with eslint/prettier configured.
+# Commit is NOT blocked by lint failures — issues are annotated into next-prompt.md
+# and WILL block the next push (enforced by pre-push hook).
+
+if [ -f "$REPO_ROOT/package.json" ]; then
+  if command -v bun &>/dev/null; then
+    RUNNER="bun run"
+  elif command -v npx &>/dev/null; then
+    RUNNER="npx --no-install"
+  else
+    RUNNER=""
+  fi
+
+  if [ -n "$RUNNER" ]; then
+    # Auto-fix silently
+    $RUNNER eslint . --fix 2>/dev/null || true
+    $RUNNER prettier --write . 2>/dev/null || true
+
+    # Check for issues that survived auto-fixing
+    UNFIXED_ESLINT=$($RUNNER eslint . --max-warnings=0 2>&1) && ESLINT_CLEAN=1 || ESLINT_CLEAN=0
+    UNFIXED_PRETTIER=$($RUNNER prettier --check . 2>&1) && PRETTIER_CLEAN=1 || PRETTIER_CLEAN=0
+
+    if [ $ESLINT_CLEAN -eq 0 ] || [ $PRETTIER_CLEAN -eq 0 ]; then
+      cat >&2 <<'BLOCK'
+
+LINT/FORMAT: auto-fix applied. Issues that could not be auto-fixed have been
+appended to next-prompt.md. They WILL block your next push if not resolved.
+
+BLOCK
+
+      cat >> "$NEXT_PROMPT" <<'HEREDOC'
+
+---
+
+## Unfixed Lint/Format Issues — Must resolve before next push
+
+The following issues could not be auto-fixed at the last commit.
+They will block the next push. Fix manually, stage, and include in the next commit.
+HEREDOC
+
+      if [ $ESLINT_CLEAN -eq 0 ]; then
+        printf '\n### ESLint\n```\n%s\n```\n' "$UNFIXED_ESLINT" >> "$NEXT_PROMPT"
+      fi
+      if [ $PRETTIER_CLEAN -eq 0 ]; then
+        printf '\n### Prettier\n```\n%s\n```\n' "$UNFIXED_PRETTIER" >> "$NEXT_PROMPT"
+      fi
+    fi
+  fi
+fi
+
+exit 0

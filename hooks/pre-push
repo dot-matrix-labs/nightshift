@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# pre-push: Blocks on lint/format/type failures and oversized PRs.
+#           Runs full test suite; annotates next-prompt.md on failures but does not block push.
+
+set -euo pipefail
+
+PR_FILE_LIMIT=20
+
+# Detect runner
+if [ -f "package.json" ] && command -v bun &>/dev/null; then
+  RUNNER="bun run"
+elif command -v npx &>/dev/null; then
+  RUNNER="npx"
+else
+  RUNNER=""
+fi
+
+# ── Lint / format / types ─────────────────────────────────────────────────────
+
+if [ -n "$RUNNER" ]; then
+  echo "pre-push: checking lint, format, and types..." >&2
+
+  QUALITY_FAILED=0
+  QUALITY_OUTPUT=""
+
+  ESLINT_OUT=$($RUNNER eslint . --max-warnings=0 2>&1) || { QUALITY_FAILED=1; QUALITY_OUTPUT+="$ESLINT_OUT"$'\n'; }
+  PRETTIER_OUT=$($RUNNER prettier --check . 2>&1) || { QUALITY_FAILED=1; QUALITY_OUTPUT+="$PRETTIER_OUT"$'\n'; }
+
+  # TypeScript check if tsconfig present
+  if [ -f "tsconfig.json" ]; then
+    TSC_OUT=$($RUNNER tsc --noEmit 2>&1) || { QUALITY_FAILED=1; QUALITY_OUTPUT+="$TSC_OUT"$'\n'; }
+  fi
+
+  if [ $QUALITY_FAILED -ne 0 ]; then
+    cat >&2 <<BLOCK
+
+PUSH BLOCKED: Lint, format, or type errors must be resolved before pushing.
+
+$QUALITY_OUTPUT
+
+These were warned about at commit time. Fix them, update next-prompt.md, and commit.
+
+BLOCK
+    exit 1
+  fi
+fi
+
+# ── PR size gate ──────────────────────────────────────────────────────────────
+
+MERGE_BASE=$(git merge-base HEAD origin/main 2>/dev/null \
+  || git merge-base HEAD main 2>/dev/null \
+  || echo "")
+
+if [ -n "$MERGE_BASE" ]; then
+  PR_FILE_COUNT=$(git diff --name-only "${MERGE_BASE}...HEAD" | wc -l | tr -d ' ')
+
+  if [ "$PR_FILE_COUNT" -gt "$PR_FILE_LIMIT" ]; then
+    cat >&2 <<BLOCK
+
+PUSH BLOCKED: This PR changes ${PR_FILE_COUNT} files (limit: ${PR_FILE_LIMIT}).
+
+Pull requests must be small and reviewable. Split this branch into smaller PRs:
+  1. Identify a logical subset of changes that can stand alone.
+  2. Create a new branch from main with only those changes.
+  3. Open a PR for that subset, get it merged.
+  4. Repeat for the remaining changes.
+
+BLOCK
+    exit 1
+  fi
+fi
+
+# ── Test suite ────────────────────────────────────────────────────────────────
+
+if [ -n "$RUNNER" ] && ([ -f "package.json" ] || [ -f "bun.lockb" ]); then
+  echo "pre-push: running test suite..." >&2
+
+  TEST_OUTPUT=$($RUNNER test 2>&1) && TEST_EXIT=0 || TEST_EXIT=$?
+
+  if [ $TEST_EXIT -ne 0 ]; then
+    FAILING=$(echo "$TEST_OUTPUT" | grep -E "^\s*(FAIL|✗|×|●|not ok)" | head -30 || true)
+
+    cat >> next-prompt.md <<EOF
+
+---
+
+## FAILING TESTS — Must be addressed before next push
+
+The following tests were failing at the time of the last push.
+Fix or rewrite them — never ignore or skip.
+
+\`\`\`
+${FAILING}
+\`\`\`
+
+For each failure: determine whether the test is wrong (fix the test) or the
+implementation is wrong (fix the code). Do not disable or skip any test.
+EOF
+
+    cat >&2 <<BLOCK
+
+WARNING: Test failures detected. Push is proceeding, but next-prompt.md has
+been updated with the failing tests. They must be resolved in the next commit.
+
+BLOCK
+  fi
+fi
+
+exit 0
