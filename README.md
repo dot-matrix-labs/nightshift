@@ -61,6 +61,38 @@ The `pre-commit` hook enforces that `next-prompt.md` is staged on every commit. 
 
 ---
 
+## Idle Mode
+
+When all planned tasks are complete, the agent should check for an `idle.md` file in the nightshift installation directory. This file defines what work to do when the main task queue is empty.
+
+**How it works:**
+
+1. Agent reads `next-prompt.md`
+2. If task is `DONE` or empty → check for `.nightshift/idle.md`
+3. If `idle.md` exists → perform those idle tasks
+4. After idle task → write next idle task or `DONE` to `next-prompt.md`
+
+**Idle tasks are marked with `[IDLE]` prefix:**
+
+```
+[IDLE] Spell check and grammar review
+```
+
+**Create `.nightshift/idle.md`** in your repo with project-specific idle tasks:
+
+```markdown
+# Idle Mode Tasks
+
+When there are no more planned tasks, the agent should:
+
+- Security hardening: review code for security vulnerabilities
+- Test coverage: expand test coverage where below 80%
+- Documentation: improve README, add code comments
+- Spell check: review markdown files for typos
+```
+
+---
+
 ## loop.sh
 
 The local runner. Each agent runs in an isolated **git worktree** — your working directory is never touched. Iterates up to `--max-iter` times (default: 10).
