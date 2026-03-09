@@ -43,12 +43,15 @@ echo ""
 # ── Git hooks ─────────────────────────────────────────────────────────────────
 
 echo "→ Installing git hooks..."
-mkdir -p .git/hooks
+mkdir -p .nightshift/hooks
 
 for hook in pre-commit commit-msg pre-push; do
-  fetch "hooks/$hook" ".git/hooks/$hook"
-  chmod +x ".git/hooks/$hook"
+  fetch "hooks/$hook" ".nightshift/hooks/$hook"
+  chmod +x ".nightshift/hooks/$hook"
 done
+
+# Configure git to use .nightshift/hooks instead of .git/hooks
+git config core.hooksPath .nightshift/hooks
 
 # ── Loop script ───────────────────────────────────────────────────────────────
 
@@ -62,11 +65,29 @@ chmod +x ".nightshift/scripts/loop.sh"
 echo "→ Installing CI workflow template..."
 fetch "templates/nightshift.yml" ".nightshift/templates/nightshift.yml"
 
+# ── GitHub Actions setup ──────────────────────────────────────────────────────
+
+USE_GITHUB_ACTIONS=""
+if [ -d ".git" ]; then
+  echo ""
+  echo "Do you want to set up GitHub Actions for automated CI iterations? [y/N]"
+  read -r USE_GITHUB_ACTIONS
+fi
+
+if [ "$USE_GITHUB_ACTIONS" = "y" ] || [ "$USE_GITHUB_ACTIONS" = "Y" ]; then
+  echo "→ Setting up GitHub Actions workflow..."
+  mkdir -p .github/workflows
+  fetch "templates/nightshift.yml" ".github/workflows/nightshift.yml"
+  echo ""
+  echo "  ✓ GitHub Actions workflow installed"
+  echo "  IMPORTANT: Add ANTHROPIC_API_KEY to your repo secrets (Settings → Secrets → Actions)"
+fi
+
 # ── next-prompt.md ────────────────────────────────────────────────────────────
 
-if [ ! -f "next-prompt.md" ]; then
-  echo "→ Creating next-prompt.md..."
-  cat > next-prompt.md <<'EOF'
+if [ ! -f ".nightshift/next-prompt.md" ]; then
+  echo "→ Creating .nightshift/next-prompt.md..."
+  cat > .nightshift/next-prompt.md <<'EOF'
 # Next Prompt
 
 Replace this file with a self-contained prompt describing the very next action
@@ -92,15 +113,19 @@ that accepts a valid refresh token (stored in an HTTP-only cookie), validates it
 against the `refresh_tokens` table, and returns a new access JWT. The access
 token TTL is 15 minutes. See `src/auth/login.ts` for the existing pattern.
 EOF
-  echo "  ✓ next-prompt.md"
+  echo "  ✓ .nightshift/next-prompt.md"
 fi
 
 echo ""
 echo "Nightshift installed successfully."
 echo ""
 echo "Next steps:"
-echo "  1. Edit next-prompt.md with your first task"
+echo "  1. Edit .nightshift/next-prompt.md with your first task"
 echo "  2. Run locally:  bash .nightshift/scripts/loop.sh"
-echo "  3. Wire up CI:   copy .nightshift/templates/nightshift.yml to .github/workflows/"
-echo "                   and add ANTHROPIC_API_KEY to your repo secrets"
+if [ "$USE_GITHUB_ACTIONS" = "y" ] || [ "$USE_GITHUB_ACTIONS" = "Y" ]; then
+  echo "  3. Add ANTHROPIC_API_KEY to repo secrets (Settings → Secrets → Actions)"
+else
+  echo "  3. Wire up CI: copy .nightshift/templates/nightshift.yml to .github/workflows/"
+  echo "                  and add ANTHROPIC_API_KEY to your repo secrets"
+fi
 echo ""

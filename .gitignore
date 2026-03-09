@@ -10,7 +10,3 @@ Thumbs.db
 # Logs
 *.log
 
-# Nightshift local state (installed into target repos, not tracked here)
-.nightshift/
-
-# Worktree agent temp branches are ephemeral — no artifacts to ignore

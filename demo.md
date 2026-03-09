@@ -8,10 +8,10 @@ Create a prototype GitHub Actions workflow (`demo.yml`) that demonstrates an AI 
 The workflow uses **Google Gemini** as the AI agent (free tier: 6,000 requests/day).
 
 The demo will:
-1. Trigger manually or on `next-prompt.md` changes
-2. Read `next-prompt.md` for the task
+1. Trigger manually or on `.nightshift/next-prompt.md` changes
+2. Read `.nightshift/next-prompt.md` for the task
 3. Run Gemini as the agent
-4. Create commits (including updating `next-prompt.md`)
+4. Create commits (including updating `.nightshift/next-prompt.md`)
 5. Push branch and open PR
 6. Human merges PR → triggers next iteration
 
