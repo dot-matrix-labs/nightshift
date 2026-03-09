@@ -1,26 +1,36 @@
 #!/usr/bin/env bash
-# commit-msg: Enforces GIT_BRAIN_METADATA schema on every agent commit.
+# commit-msg: Validates GIT_BRAIN_METADATA schema on agent commits.
 #
-# BLOCKS if:
-#   - GIT_BRAIN_METADATA block is missing
-#   - JSON is malformed
-#   - Any required field is absent or empty
-#   - retroactive_prompt is < 50 chars
+# By default, missing or invalid metadata prints a warning but does NOT block.
+# Set NIGHTSHIFT_STRICT_METADATA=1 to block on violations.
+#
+# No external dependencies — pure bash + awk/grep.
 
 COMMIT_FILE="$1"
 MSG=$(cat "$COMMIT_FILE")
 
+STRICT="${NIGHTSHIFT_STRICT_METADATA:-0}"
+[ "$STRICT" = "1" ] && VERDICT="COMMIT BLOCKED" || VERDICT="WARNING"
+[ "$STRICT" = "1" ] && FAIL_EXIT=1 || FAIL_EXIT=0
+
+warn_or_block() {
+  echo "" >&2
+  echo "$VERDICT: $1" >&2
+  echo "" >&2
+  exit $FAIL_EXIT
+}
+
 if ! echo "$MSG" | grep -q "GIT_BRAIN_METADATA:"; then
-  cat >&2 <<'BLOCK'
+  cat >&2 <<BLOCK
 
-COMMIT BLOCKED: GIT_BRAIN_METADATA block is missing from the commit message.
+$VERDICT: GIT_BRAIN_METADATA block is missing from the commit message.
 
-Every agent commit must end with a structured metadata block. The key field is
-retroactive_prompt — not the instruction you were given, but the instruction
-you would write now, with full knowledge of what this change required, so that
-another agent could reproduce it without asking questions.
+Agent commits should embed a structured metadata block so that git history
+becomes a reasoning ledger — future agents can reconstruct not just what
+changed, but why. The key field is retroactive_prompt: the instruction you
+would write now, with full knowledge of what this change required.
 
-Required format (append to the end of your commit message):
+Recommended format (append to the end of your commit message):
 
 <!--
 GIT_BRAIN_METADATA:
@@ -34,29 +44,37 @@ GIT_BRAIN_METADATA:
 }
 -->
 
+Set NIGHTSHIFT_STRICT_METADATA=1 to enforce this as a hard block.
+
 BLOCK
-  exit 1
+  exit $FAIL_EXIT
 fi
 
-# Extract JSON between GIT_BRAIN_METADATA: and closing -->
+# Extract the JSON block between GIT_BRAIN_METADATA: and closing -->
 JSON=$(awk '/GIT_BRAIN_METADATA:/{found=1; next} found && /-->/{exit} found{print}' "$COMMIT_FILE")
 
-# Validate with the schema validator script (requires Node/Bun)
-VALIDATOR_PATH="$(git rev-parse --show-toplevel)/.nightshift/scripts/validate-metadata.mjs"
-FALLBACK_PATH="$(dirname "$(realpath "$0")")/../scripts/validate-metadata.mjs"
+if [ -z "$(echo "$JSON" | tr -d '[:space:]')" ]; then
+  warn_or_block "GIT_BRAIN_METADATA block is present but the JSON body is empty."
+fi
 
-if [ -f "$VALIDATOR_PATH" ]; then
-  echo "$JSON" | node "$VALIDATOR_PATH" >&2 || exit 1
-elif [ -f "$FALLBACK_PATH" ]; then
-  echo "$JSON" | node "$FALLBACK_PATH" >&2 || exit 1
-else
-  # Minimal inline validation if no validator script is found
-  for FIELD in retroactive_prompt outcome context agent session; do
-    if ! echo "$JSON" | grep -q "\"$FIELD\""; then
-      echo "COMMIT BLOCKED: GIT_BRAIN_METADATA missing required field: $FIELD" >&2
-      exit 1
-    fi
-  done
+# Check that the block looks like an object (basic sanity, no JSON parser needed)
+if ! echo "$JSON" | grep -q '{'; then
+  warn_or_block "GIT_BRAIN_METADATA: JSON block does not appear to contain an object."
+fi
+
+# Validate required fields are present and non-empty
+for FIELD in retroactive_prompt outcome context agent session; do
+  # Match "field": "non-empty-value" or "field": [...
+  if ! echo "$JSON" | grep -qE "\"${FIELD}\"[[:space:]]*:[[:space:]]*\"[^\"]+\""; then
+    warn_or_block "GIT_BRAIN_METADATA: missing or empty required field: ${FIELD}"
+  fi
+done
+
+# Validate retroactive_prompt length (>= 50 chars)
+RP=$(echo "$JSON" | grep -oE '"retroactive_prompt"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*": *"//' | sed 's/"$//')
+RP_LEN=${#RP}
+if [ "$RP_LEN" -lt 50 ]; then
+  warn_or_block "GIT_BRAIN_METADATA: retroactive_prompt is too short (${RP_LEN} chars, minimum 50). It must be specific enough for another agent to reproduce this change."
 fi
 
 exit 0

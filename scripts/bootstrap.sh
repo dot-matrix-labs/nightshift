@@ -8,11 +8,10 @@
 #   bash /path/to/nightshift/scripts/bootstrap.sh
 #
 # What this does:
-#   1. Installs git hooks (pre-commit, commit-msg, post-commit, pre-push)
-#   2. Installs the metadata validator script
-#   3. Installs the GitHub Actions nightshift workflow
+#   1. Installs git hooks (pre-commit, commit-msg, pre-push) — pure bash, no dependencies
+#   2. Installs loop.sh for local agent sessions
+#   3. Installs nightshift.yml CI workflow template
 #   4. Creates next-prompt.md if it doesn't exist
-#   5. Installs the worktree-agent script
 
 set -euo pipefail
 
@@ -46,28 +45,22 @@ echo ""
 echo "→ Installing git hooks..."
 mkdir -p .git/hooks
 
-for hook in pre-commit commit-msg post-commit pre-push; do
+for hook in pre-commit commit-msg pre-push; do
   fetch "hooks/$hook" ".git/hooks/$hook"
   chmod +x ".git/hooks/$hook"
 done
 
-# ── Validator script ──────────────────────────────────────────────────────────
+# ── Loop script ───────────────────────────────────────────────────────────────
 
-echo "→ Installing validator..."
+echo "→ Installing loop.sh..."
 mkdir -p .nightshift/scripts
-fetch "scripts/validate-metadata.mjs" ".nightshift/scripts/validate-metadata.mjs"
+fetch "scripts/loop.sh" ".nightshift/scripts/loop.sh"
+chmod +x ".nightshift/scripts/loop.sh"
 
-# ── Worktree agent script ─────────────────────────────────────────────────────
+# ── CI workflow template ──────────────────────────────────────────────────────
 
-echo "→ Installing worktree-agent..."
-mkdir -p .nightshift/scripts
-fetch "scripts/worktree-agent.sh" ".nightshift/scripts/worktree-agent.sh"
-chmod +x ".nightshift/scripts/worktree-agent.sh"
-
-# ── GitHub Actions workflow ───────────────────────────────────────────────────
-
-echo "→ Installing GitHub Actions workflow..."
-fetch ".github/workflows/nightshift.yml" ".github/workflows/nightshift.yml"
+echo "→ Installing CI workflow template..."
+fetch "templates/nightshift.yml" ".nightshift/templates/nightshift.yml"
 
 # ── next-prompt.md ────────────────────────────────────────────────────────────
 
@@ -78,8 +71,8 @@ if [ ! -f "next-prompt.md" ]; then
 
 Replace this file with a self-contained prompt describing the very next action
 the agent should take. This file is the trigger for the Nightshift runtime:
-committing a change to this file on `main` will cause GitHub Actions to spin up
-an agent, execute the prompt, commit the result on a new branch, and open a PR.
+committing a change to this file starts a new agent session — locally via
+loop.sh, or automatically via your CI system.
 
 Every agent commit must also update this file with the prompt for the next task,
 creating a self-advancing loop.
@@ -107,6 +100,7 @@ echo "Nightshift installed successfully."
 echo ""
 echo "Next steps:"
 echo "  1. Edit next-prompt.md with your first task"
-echo "  2. Commit it to main — GitHub Actions will take it from there"
-echo "  3. Or run locally: bash .nightshift/scripts/worktree-agent.sh"
+echo "  2. Run locally:  bash .nightshift/scripts/loop.sh"
+echo "  3. Wire up CI:   copy .nightshift/templates/nightshift.yml to .github/workflows/"
+echo "                   and add ANTHROPIC_API_KEY to your repo secrets"
 echo ""

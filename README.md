@@ -1,154 +1,173 @@
 ![Nightshift Banner](./docs/assets/banner.svg)
 
-**Nightshift** is a git-native runtime for autonomous AI agents. A commit to `next-prompt.md` on `main` is the invocation. GitHub Actions is the scheduler. Git hooks are the quality gates. Bash is the glue.
+**Nightshift** is a git-native agentic coding loop. `next-prompt.md` committed in git is the state machine. A loop — bash or CI — reads that state, runs the agent, and checks the result. **Only a git commit advances the state.** If the agent doesn't commit, the loop halts.
 
 ---
 
 ## The Model
 
 ```
-next-prompt.md on main
+next-prompt.md (in git)
         │
         ▼
-  GitHub Actions
-  (nightshift.yml)
+   loop reads prompt
         │
-        ├─ creates branch: ns/session/<timestamp>
-        ├─ runs agent with prompt on stdin
-        ├─ agent commits work (hooks enforce quality)
-        ├─ opens PR
-        └─ on merge → cycle repeats
+        ▼
+   agent runs
+        │
+        ├─ makes commits (including next-prompt.md)  ← state advances
+        │         │
+        │         ▼
+        │   loop reads new next-prompt.md
+        │         │
+        │         └─ repeat until DONE or max iterations
+        │
+        └─ makes no commit  ← loop halts (state stalled)
 ```
 
-There is no daemon. There is no server. The runtime is GitHub Actions. The state is git. The invocation is a commit.
+Two interchangeable runners, same protocol:
+
+| Runner | How to use |
+|--------|-----------|
+| `loop.sh` | Local bash loop. Iterates on a session branch until done. |
+| `nightshift.yml` | CI workflow. One iteration per push to `next-prompt.md` on main; merge the PR to trigger the next. |
 
 ---
 
 ## Quick Start
 
-Give this prompt to your agent:
-
-```
-Bootstrap Nightshift in this repository:
-
-  curl -sSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/scripts/bootstrap.sh | bash
-
-Then:
-1. Add ANTHROPIC_API_KEY to your repository secrets.
-2. Edit next-prompt.md with your first task.
-3. Commit and push to main.
-```
-
-Or run the bootstrap directly:
-
 ```bash
+# 1. Install into current repo
 curl -sSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/scripts/bootstrap.sh | bash
+
+# 2. Write your first task
+echo "Add a /healthz endpoint to src/index.ts that returns 200 OK." > next-prompt.md
+
+# 3. Run the loop
+bash .nightshift/scripts/loop.sh
 ```
+
+The loop runs the agent against `next-prompt.md`, waits for a commit, reads the updated `next-prompt.md`, and repeats. Tell your agent in the system prompt (or in `next-prompt.md` itself) that it must commit `next-prompt.md` with the next task on every commit, and write `DONE` when finished.
 
 ---
 
-## What Gets Installed
+## next-prompt.md
+
+The state machine node. Every agent commit must update this file with the prompt for the next iteration — that is how the loop advances. Humans can redirect the agent at any time by editing and committing this file.
+
+**Completion**: when the agent writes `DONE` (or leaves the file empty) into `next-prompt.md` and commits it, the loop stops.
+
+The `pre-commit` hook enforces that `next-prompt.md` is staged on every commit. A commit without it is blocked — the agent cannot advance state silently.
+
+---
+
+## loop.sh
+
+The local runner. Each agent runs in an isolated **git worktree** — your working directory is never touched. Iterates up to `--max-iter` times (default: 10).
+
+```bash
+# Serial: one agent, iterates to completion
+bash .nightshift/scripts/loop.sh
+
+# Parallel: N agents simultaneously, each on its own worktree and branch
+bash .nightshift/scripts/loop.sh --parallel 3
+
+# Full options:
+bash .nightshift/scripts/loop.sh \
+  --max-iter 20 \
+  --parallel 3 \
+  --agent "claude --print" \
+  --branch ns/session/my-feature \
+  --no-pr
+```
+
+**Serial mode** (`--parallel 1`, default): one agent iterates on one worktree until done. One branch, one PR.
+
+**Parallel mode** (`--parallel N`): N agents run simultaneously on N isolated worktrees. Each gets the same starting `next-prompt.md` and works independently. Results in N branches (`<base>/agent-1`, `<base>/agent-2`, ...) and N PRs — pick the best one.
+
+The loop (per agent) halts if:
+- `next-prompt.md` is empty or `DONE` after a commit
+- The agent makes no commit (state stalled)
+- The agent exits non-zero
+- `--max-iter` is reached
+
+---
+
+## CI Runner
+
+`nightshift.yml` is structurally one iteration of what `loop.sh` does locally:
 
 ```
-.git/hooks/
-  pre-commit          # next-prompt.md gate + lint auto-fix
-  commit-msg          # GIT_BRAIN_METADATA enforcement
-  post-commit         # PR-due advisory at 10 files
-  pre-push            # lint/type block + PR size gate (20 files) + test annotation
-
-.nightshift/scripts/
-  validate-metadata.mjs   # commit-msg schema validator
-  worktree-agent.sh       # run agent locally in a fresh worktree
-
-.github/workflows/
-  nightshift.yml          # the runtime
-
-next-prompt.md            # the invocation point
+read next-prompt.md → run agent → verify commit was made → push → open PR
 ```
+
+The loop-back is the merge: when the PR lands on `main`, the updated `next-prompt.md` triggers the next CI run. The human decides when to merge — that's the review gate.
+
+To set it up:
+1. Copy `.nightshift/templates/nightshift.yml` to `.github/workflows/nightshift.yml`
+2. Add `ANTHROPIC_API_KEY` to your repository secrets
+
+Any CI system works. The contract is simple — watch `next-prompt.md` on main, run the agent, fail if no commit was made:
+
+```bash
+HEAD_BEFORE=$(git rev-parse HEAD)
+git checkout -b "ns/session/$(date +%Y%m%d-%H%M%S)"
+$AGENT_CMD < next-prompt.md
+[ "$(git rev-parse HEAD)" = "$HEAD_BEFORE" ] && exit 1  # stall = failure
+git push -u origin HEAD
+```
+
+| | `loop.sh` | `nightshift.yml` |
+|---|---|---|
+| Isolation | git worktree | fresh CI checkout |
+| Iteration | while loop | PR merge → re-trigger |
+| Stall detection | HEAD compare | HEAD compare |
+| State advance | git commit | git commit |
+| Review gate | human merges PR | human merges PR |
 
 ---
 
 ## Git Hooks
 
-Every hook is a standalone bash script with no dependencies beyond `git` and optionally `node`/`bun` for projects that use them.
+Installed into `.git/hooks/`. Pure bash, no external dependencies.
 
-| Hook | Stage | Behaviour |
-|---|---|---|
-| `pre-commit` | Before commit | **BLOCKS** if `next-prompt.md` not staged. Warns on > 10 files. Auto-fixes lint; appends unfixable issues to `next-prompt.md`. |
-| `commit-msg` | After message written | **BLOCKS** if `GIT_BRAIN_METADATA` missing, malformed, or incomplete. |
-| `post-commit` | After commit | **Warns** when branch has ≥ 10 files changed vs. main. Appends PR-due notice to `next-prompt.md`. |
-| `pre-push` | Before push | **BLOCKS** on lint/type failures or PR > 20 files. Runs tests; appends failures to `next-prompt.md` but does not block push. |
+| Hook | Behaviour |
+|------|-----------|
+| `pre-commit` | **BLOCKS** if `next-prompt.md` not staged. Warns on > 10 files changed. Auto-fixes lint where possible; appends unfixable issues to `next-prompt.md`. |
+| `commit-msg` | **Warns** if `GIT_BRAIN_METADATA` missing or malformed. Set `NIGHTSHIFT_STRICT_METADATA=1` to block. |
+| `pre-push` | **BLOCKS** on lint/type failures or PR > 20 files. Runs tests; appends failures to `next-prompt.md`. |
 
-### GIT_BRAIN_METADATA
+---
 
-Every agent commit embeds a structured reasoning block in the commit message. This turns git history into a **reasoning ledger** — future agents can reconstruct not just what changed, but why, and how to reproduce it.
+## GIT_BRAIN_METADATA
+
+An optional structured block in each commit message that turns git history into a reasoning ledger — future agents (and humans) can reconstruct not just what changed, but why and how to reproduce it.
 
 ```
 feat(auth): implement jwt validation middleware
 
-Adds middleware to verify JWT tokens on all protected routes.
-
 <!--
 GIT_BRAIN_METADATA:
 {
-  "retroactive_prompt": "Add JWT validation middleware in src/middleware/auth.ts. Read the token from Authorization: Bearer, verify with HS256 using JWT_SECRET env var, attach decoded payload to ctx.state.user, return 401 JSON for missing or expired tokens. Wire into router.ts before all /api routes.",
-  "outcome": "Protected routes return 401 with {error: 'unauthorized'} for missing/expired tokens. Valid tokens set ctx.state.user.",
-  "context": "Server uses Bun's native HTTP with a thin router in src/router.ts. Auth state flows via ctx.state. JWT_SECRET is in .env.",
+  "retroactive_prompt": "Add JWT validation middleware in src/middleware/auth.ts ...",
+  "outcome": "Protected routes return 401 for missing/expired tokens.",
+  "context": "Server uses Bun's native HTTP with a thin router in src/router.ts.",
   "agent": "claude-sonnet-4-6",
   "session": "sess_20260307_auth",
-  "hints": [
-    "Read from ctx.request.headers.get('authorization'), not req.headers",
-    "Handle TokenExpiredError and JsonWebTokenError as distinct 401 cases"
-  ]
+  "hints": ["Read from ctx.request.headers.get('authorization'), not req.headers"]
 }
 -->
 ```
 
 Required fields: `retroactive_prompt` (≥ 50 chars), `outcome`, `context`, `agent`, `session`.
 
----
-
-## next-prompt.md
-
-This file is the single source of truth for what the agent does next. It drives two things:
-
-1. **GitHub Actions trigger** — pushing a change to this file on `main` starts a new agent session.
-2. **Session continuity** — every agent commit overwrites this file with the prompt for the next commit, creating a self-advancing loop.
-
-The pre-commit hook enforces that `next-prompt.md` is staged at every commit. A commit is the unit of progress; the agent session spans many commits.
-
-Humans can override the next task at any time by editing `next-prompt.md` directly and pushing to main.
-
----
-
-## Running Locally
-
-To run an agent session in a local worktree without GitHub Actions:
-
-```bash
-bash .nightshift/scripts/worktree-agent.sh
-# with options:
-bash .nightshift/scripts/worktree-agent.sh --prompt next-prompt.md --branch ns/session/my-task --agent "claude --print"
-```
-
----
-
-## Repository Variables
-
-Set these in your GitHub repository settings (Settings → Variables):
-
-| Variable | Default | Description |
-|---|---|---|
-| `NIGHTSHIFT_AUTO_ADVANCE` | `false` | Poll for PR merge and log completion |
-| `NIGHTSHIFT_AGENT_CMD` | `claude --print` | Override the agent command |
-
-Required secret: `ANTHROPIC_API_KEY`.
+Warned on by default. To enforce as a hard block: `export NIGHTSHIFT_STRICT_METADATA=1`.
 
 ---
 
 ## Branch Naming
 
-Nightshift branches follow the pattern `ns/session/<timestamp>`. For human-initiated branches with multiple options, use `ns/session/<name>/option-a`, `ns/session/<name>/option-b` to show lineage and intent.
+Session branches: `ns/session/<timestamp>`. Parallel explorations: `ns/session/<name>/option-a`, `ns/session/<name>/option-b`.
 
 ---
 
