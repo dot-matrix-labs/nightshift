@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# commit-msg: Validates GIT_BRAIN_METADATA schema on agent commits.
+#
+# By default, missing or invalid metadata prints a warning but does NOT block.
+# Set NIGHTSHIFT_STRICT_METADATA=1 to block on violations.
+#
+# No external dependencies — pure bash + awk/grep.
+
+COMMIT_FILE="$1"
+MSG=$(cat "$COMMIT_FILE")
+
+STRICT="${NIGHTSHIFT_STRICT_METADATA:-0}"
+[ "$STRICT" = "1" ] && VERDICT="COMMIT BLOCKED" || VERDICT="WARNING"
+[ "$STRICT" = "1" ] && FAIL_EXIT=1 || FAIL_EXIT=0
+
+warn_or_block() {
+  echo "" >&2
+  echo "$VERDICT: $1" >&2
+  echo "" >&2
+  exit $FAIL_EXIT
+}
+
+if ! echo "$MSG" | grep -q "GIT_BRAIN_METADATA:"; then
+  cat >&2 <<BLOCK
+
+$VERDICT: GIT_BRAIN_METADATA block is missing from the commit message.
+
+Agent commits should embed a structured metadata block so that git history
+becomes a reasoning ledger — future agents can reconstruct not just what
+changed, but why. The key field is retroactive_prompt: the instruction you
+would write now, with full knowledge of what this change required.
+
+Recommended format (append to the end of your commit message):
+
+<!--
+GIT_BRAIN_METADATA:
+{
+  "retroactive_prompt": "Specific, self-contained instruction to reproduce this change.",
+  "outcome": "Observable, verifiable result of this commit.",
+  "context": "Architectural or domain context not visible from the diff.",
+  "agent": "claude-sonnet-4-6",
+  "session": "sess_20260307_example",
+  "hints": ["ordered", "implementation", "notes"]
+}
+-->
+
+Set NIGHTSHIFT_STRICT_METADATA=1 to enforce this as a hard block.
+
+BLOCK
+  exit $FAIL_EXIT
+fi
+
+# Extract the JSON block between GIT_BRAIN_METADATA: and closing -->
+JSON=$(awk '/GIT_BRAIN_METADATA:/{found=1; next} found && /-->/{exit} found{print}' "$COMMIT_FILE")
+
+if [ -z "$(echo "$JSON" | tr -d '[:space:]')" ]; then
+  warn_or_block "GIT_BRAIN_METADATA block is present but the JSON body is empty."
+fi
+
+# Check that the block looks like an object (basic sanity, no JSON parser needed)
+if ! echo "$JSON" | grep -q '{'; then
+  warn_or_block "GIT_BRAIN_METADATA: JSON block does not appear to contain an object."
+fi
+
+# Validate required fields are present and non-empty
+for FIELD in retroactive_prompt outcome context agent session; do
+  # Match "field": "non-empty-value" or "field": [...
+  if ! echo "$JSON" | grep -qE "\"${FIELD}\"[[:space:]]*:[[:space:]]*\"[^\"]+\""; then
+    warn_or_block "GIT_BRAIN_METADATA: missing or empty required field: ${FIELD}"
+  fi
+done
+
+# Validate retroactive_prompt length (>= 50 chars)
+RP=$(echo "$JSON" | grep -oE '"retroactive_prompt"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*": *"//' | sed 's/"$//')
+RP_LEN=${#RP}
+if [ "$RP_LEN" -lt 50 ]; then
+  warn_or_block "GIT_BRAIN_METADATA: retroactive_prompt is too short (${RP_LEN} chars, minimum 50). It must be specific enough for another agent to reproduce this change."
+fi
+
+exit 0

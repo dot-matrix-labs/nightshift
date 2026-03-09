@@ -7,7 +7,7 @@
 ## The Model
 
 ```
-next-prompt.md (in git)
+.nightshift/next-prompt.md (in git)
         │
         ▼
    loop reads prompt
@@ -15,10 +15,10 @@ next-prompt.md (in git)
         ▼
    agent runs
         │
-        ├─ makes commits (including next-prompt.md)  ← state advances
+        ├─ makes commits (including .nightshift/next-prompt.md)  ← state advances
         │         │
         │         ▼
-        │   loop reads new next-prompt.md
+        │   loop reads new .nightshift/next-prompt.md
         │         │
         │         └─ repeat until DONE or max iterations
         │
@@ -30,7 +30,7 @@ Two interchangeable runners, same protocol:
 | Runner | How to use |
 |--------|-----------|
 | `loop.sh` | Local bash loop. Iterates on a session branch until done. |
-| `nightshift.yml` | CI workflow. One iteration per push to `next-prompt.md` on main; merge the PR to trigger the next. |
+| `nightshift.yml` | CI workflow. One iteration per push to `.nightshift/next-prompt.md` on main; merge the PR to trigger the next. |
 
 ---
 
@@ -41,7 +41,7 @@ Two interchangeable runners, same protocol:
 curl -sSL https://raw.githubusercontent.com/dot-matrix-labs/nightshift/main/scripts/bootstrap.sh | bash
 
 # 2. Write your first task
-echo "Add a /healthz endpoint to src/index.ts that returns 200 OK." > next-prompt.md
+echo "Add a /healthz endpoint to src/index.ts that returns 200 OK." > .nightshift/next-prompt.md
 
 # 3. Run the loop
 bash .nightshift/scripts/loop.sh
@@ -53,11 +53,43 @@ The loop runs the agent against `next-prompt.md`, waits for a commit, reads the 
 
 ## next-prompt.md
 
-The state machine node. Every agent commit must update this file with the prompt for the next iteration — that is how the loop advances. Humans can redirect the agent at any time by editing and committing this file.
+The state machine node. Located at `.nightshift/next-prompt.md`. Every agent commit must update this file with the prompt for the next iteration — that is how the loop advances. Humans can redirect the agent at any time by editing and committing this file.
 
-**Completion**: when the agent writes `DONE` (or leaves the file empty) into `next-prompt.md` and commits it, the loop stops.
+**Completion**: when the agent writes `DONE` (or leaves the file empty) into `.nightshift/next-prompt.md` and commits it, the loop stops.
 
-The `pre-commit` hook enforces that `next-prompt.md` is staged on every commit. A commit without it is blocked — the agent cannot advance state silently.
+The `pre-commit` hook enforces that `.nightshift/next-prompt.md` is staged on every commit. A commit without it is blocked — the agent cannot advance state silently.
+
+---
+
+## Idle Mode
+
+When all planned tasks are complete, the agent should check for an `idle.md` file in the nightshift installation directory. This file defines what work to do when the main task queue is empty.
+
+**How it works:**
+
+1. Agent reads `.nightshift/next-prompt.md`
+2. If task is `DONE` or empty → check for `.nightshift/idle.md`
+3. If `idle.md` exists → perform those idle tasks
+4. After idle task → write next idle task or `DONE` to `.nightshift/next-prompt.md`
+
+**Idle tasks are marked with `[IDLE]` prefix:**
+
+```
+[IDLE] Spell check and grammar review
+```
+
+**Create `.nightshift/idle.md`** in your repo with project-specific idle tasks:
+
+```markdown
+# Idle Mode Tasks
+
+When there are no more planned tasks, the agent should:
+
+- Security hardening: review code for security vulnerabilities
+- Test coverage: expand test coverage where below 80%
+- Documentation: improve README, add code comments
+- Spell check: review markdown files for typos
+```
 
 ---
 
@@ -86,7 +118,7 @@ bash .nightshift/scripts/loop.sh \
 **Parallel mode** (`--parallel N`): N agents run simultaneously on N isolated worktrees. Each gets the same starting `next-prompt.md` and works independently. Results in N branches (`<base>/agent-1`, `<base>/agent-2`, ...) and N PRs — pick the best one.
 
 The loop (per agent) halts if:
-- `next-prompt.md` is empty or `DONE` after a commit
+- `.nightshift/next-prompt.md` is empty or `DONE` after a commit
 - The agent makes no commit (state stalled)
 - The agent exits non-zero
 - `--max-iter` is reached
@@ -98,21 +130,21 @@ The loop (per agent) halts if:
 `nightshift.yml` is structurally one iteration of what `loop.sh` does locally:
 
 ```
-read next-prompt.md → run agent → verify commit was made → push → open PR
+read .nightshift/next-prompt.md → run agent → verify commit was made → push → open PR
 ```
 
-The loop-back is the merge: when the PR lands on `main`, the updated `next-prompt.md` triggers the next CI run. The human decides when to merge — that's the review gate.
+The loop-back is the merge: when the PR lands on `main`, the updated `.nightshift/next-prompt.md` triggers the next CI run. The human decides when to merge — that's the review gate.
 
 To set it up:
 1. Copy `.nightshift/templates/nightshift.yml` to `.github/workflows/nightshift.yml`
 2. Add `ANTHROPIC_API_KEY` to your repository secrets
 
-Any CI system works. The contract is simple — watch `next-prompt.md` on main, run the agent, fail if no commit was made:
+Any CI system works. The contract is simple — watch `.nightshift/next-prompt.md` on main, run the agent, fail if no commit was made:
 
 ```bash
 HEAD_BEFORE=$(git rev-parse HEAD)
 git checkout -b "ns/session/$(date +%Y%m%d-%H%M%S)"
-$AGENT_CMD < next-prompt.md
+$AGENT_CMD < .nightshift/next-prompt.md
 [ "$(git rev-parse HEAD)" = "$HEAD_BEFORE" ] && exit 1  # stall = failure
 git push -u origin HEAD
 ```
@@ -129,13 +161,13 @@ git push -u origin HEAD
 
 ## Git Hooks
 
-Installed into `.git/hooks/`. Pure bash, no external dependencies.
+Installed into `.nightshift/hooks/`. Configured via `git config core.hooksPath .nightshift/hooks`. Pure bash, no external dependencies.
 
 | Hook | Behaviour |
 |------|-----------|
-| `pre-commit` | **BLOCKS** if `next-prompt.md` not staged. Warns on > 10 files changed. Auto-fixes lint where possible; appends unfixable issues to `next-prompt.md`. |
+| `pre-commit` | **BLOCKS** if `.nightshift/next-prompt.md` not staged. Warns on > 10 files changed. Auto-fixes lint where possible; appends unfixable issues to `.nightshift/next-prompt.md`. |
 | `commit-msg` | **Warns** if `GIT_BRAIN_METADATA` missing or malformed. Set `NIGHTSHIFT_STRICT_METADATA=1` to block. |
-| `pre-push` | **BLOCKS** on lint/type failures or PR > 20 files. Runs tests; appends failures to `next-prompt.md`. |
+| `pre-push` | **BLOCKS** on lint/type failures or PR > 20 files. Runs tests; appends failures to `.nightshift/next-prompt.md`. |
 
 ---
 

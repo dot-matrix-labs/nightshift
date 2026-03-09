@@ -1,0 +1,67 @@
+name: Nightshift Demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Task prompt'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - next-prompt.md
+
+concurrency:
+  group: nightshift-demo
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    name: Run Gemini agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "nightshift[bot]"
+          git config user.email "nightshift[bot]@users.noreply.github.com"
+
+      - name: Create session branch
+        id: branch
+        run: |
+          BRANCH="demo/session/$(date +%Y%m%d-%H%M%S)"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+          git checkout -b "$BRANCH"
+
+      - name: Run Nightshift loop with Gemini
+        run: |
+          chmod +x .nightshift/scripts/gemini-agent.sh
+          .nightshift/scripts/loop.sh \
+            --agent ".nightshift/scripts/gemini-agent.sh" \
+            --max-iter 3 \
+            --no-pr
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Push branch
+        run: git push -u origin "${{ steps.branch.outputs.name }}"
+
+      - name: Open PR
+        run: |
+          TITLE=$(grep -m1 "^[^#[:space:]]" next-prompt.md 2>/dev/null | cut -c1-72 || echo "Nightshift demo session")
+          gh pr create \
+            --title "${TITLE:-Nightshift demo session}" \
+            --body "Nightshift demo agent session on \`${{ steps.branch.outputs.name }}\`." \
+            --base main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
